@@ -6,7 +6,7 @@
   <title>UtilVision - In-Browser AMR Meter Vision</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
-  <!-- ONNX Runtime Web (WebAssembly SIMD + WebGPU Edge Execution) -->
+  <!-- ONNX Runtime Web -->
   <script src="https://cdn.jsdelivr.net/npm/onnxruntime-web@1.19.2/dist/ort.min.js"></script>
   <style>
     :root {
@@ -96,7 +96,7 @@
       100% { opacity: 1; transform: scale(1); }
     }
 
-    /* Model Precision Bar */
+    /* Precision Bar */
     .precision-bar {
       display: flex;
       justify-content: space-between;
@@ -124,7 +124,7 @@
       background: transparent;
       border: 1px solid #334155;
       color: var(--muted);
-      padding: 5px 10px;
+      padding: 6px 12px;
       font-size: 11px;
       font-weight: 600;
       border-radius: 6px;
@@ -208,7 +208,7 @@
     .drop-zone {
       border: 2px dashed #374151;
       border-radius: 12px;
-      padding: 22px 14px;
+      padding: 24px 14px;
       text-align: center;
       cursor: pointer;
       background: rgba(17, 24, 39, 0.5);
@@ -518,7 +518,7 @@
     </div>
     <div class="status-pill">
       <div class="pulse-dot"></div>
-      <span id="cache-status-text">Client Ready: WebGPU/WASM</span>
+      <span id="cache-status-text">Client Ready: WASM SIMD</span>
     </div>
   </header>
 
@@ -559,8 +559,8 @@
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
         </svg>
         <div class="drop-text">Take Meter Photo or Upload</div>
-        <div class="drop-sub">Runs completely on your phone's processor — 100% private</div>
-        <input type="file" id="file-input" accept="image/*" style="display: none;" onchange="handleFileSelected(this.files[0])">
+        <div class="drop-sub">Runs completely on device processor — 100% private</div>
+        <input type="file" id="file-input" accept="image/*" style="display: none;" onchange="handleFileFromInput(this.files[0])">
       </div>
 
       <!-- Quick Real-World Presets -->
@@ -675,6 +675,14 @@
 </div>
 
 <script>
+  // Configure ONNX Runtime Web WASM CDN paths and single-threaded execution
+  // (Single thread is required for web compatibility because browsers forbid SharedArrayBuffer without COOP/COEP headers)
+  if (window.ort) {
+    ort.env.wasm.wasmPaths = 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.19.2/dist/';
+    ort.env.wasm.numThreads = 1;
+    ort.env.wasm.proxy = false;
+  }
+
   let currentPrecision = 'fp16'; // 'fp16' or 'fp32'
   let s2_session = null;
   let s3_fp16_session = null;
@@ -686,7 +694,7 @@
   let isCameraActive = false;
   let autoStreamInterval = null;
 
-  // Offscreen canvases
+  // Offscreen canvases for preprocessing
   const s2Canvas = document.createElement('canvas');
   s2Canvas.width = 640;
   s2Canvas.height = 640;
@@ -717,7 +725,7 @@
 
   // Persistent Cache Storage for Zero Re-Download
   async function fetchModelWithCache(url, onProgress) {
-    const cacheName = 'utilvision-gh-pages-v1';
+    const cacheName = 'utilvision-models-v2';
     let cache = null;
     try {
       if ('caches' in window) {
@@ -729,10 +737,11 @@
         }
       }
     } catch (e) {
-      console.warn("CacheStorage unavailable:", e);
+      console.warn("CacheStorage not accessible:", e);
     }
 
-    if (onProgress) onProgress(`Downloading ${url.split('/').pop()} (Visit 1 only, cached forever)...`);
+    const filename = url.split('/').pop();
+    if (onProgress) onProgress(`Downloading ${filename} (Visit 1 only, cached forever)...`);
     const resp = await fetch(url);
     if (!resp.ok) throw new Error(`HTTP ${resp.status} fetching ${url}`);
 
@@ -748,7 +757,7 @@
   async function checkModelCached(url) {
     try {
       if ('caches' in window) {
-        const cache = await caches.open('utilvision-gh-pages-v1');
+        const cache = await caches.open('utilvision-models-v2');
         const match = await cache.match(url);
         return !!match;
       }
@@ -761,37 +770,26 @@
     if (isInitializingModels) return;
     isInitializingModels = true;
 
-    showLoading(true, "Initializing Edge Sessions (WebGPU / WASM)...");
+    showLoading(true, "Initializing Edge Inference Session...");
     try {
-      ort.env.wasm.numThreads = Math.min(4, navigator.hardwareConcurrency || 4);
-      ort.env.wasm.simd = true;
-
-      const providers = ['wasm'];
-      if ('gpu' in navigator) providers.unshift('webgpu');
+      if (!window.ort) {
+        throw new Error("ONNX Runtime Web script failed to load from CDN. Please check your internet connection.");
+      }
 
       if (!s2_session) {
         showLoading(true, "Loading Stage 2 YOLOv11 (10.6 MB)...");
         const s2Buf = await fetchModelWithCache('./models/stage2.onnx', (m) => showLoading(true, m));
-        s2_session = await ort.InferenceSession.create(s2Buf, {
-          executionProviders: providers,
-          graphOptimizationLevel: 'all'
-        });
+        s2_session = await ort.InferenceSession.create(s2Buf, { executionProviders: ['wasm'] });
       }
 
       if (currentPrecision === 'fp16' && !s3_fp16_session) {
         showLoading(true, "Loading Stage 3 PP-OCRv6 FP16 (31 MB)...");
         const s3Buf = await fetchModelWithCache('./models/stage3_fp16.onnx', (m) => showLoading(true, m));
-        s3_fp16_session = await ort.InferenceSession.create(s3Buf, {
-          executionProviders: providers,
-          graphOptimizationLevel: 'all'
-        });
+        s3_fp16_session = await ort.InferenceSession.create(s3Buf, { executionProviders: ['wasm'] });
       } else if (currentPrecision === 'fp32' && !s3_fp32_session) {
         showLoading(true, "Loading Stage 3 PP-OCRv6 Full FP32 (62 MB)...");
         const s3Buf = await fetchModelWithCache('./models/stage3_fp32.onnx', (m) => showLoading(true, m));
-        s3_fp32_session = await ort.InferenceSession.create(s3Buf, {
-          executionProviders: providers,
-          graphOptimizationLevel: 'all'
-        });
+        s3_fp32_session = await ort.InferenceSession.create(s3Buf, { executionProviders: ['wasm'] });
       }
 
       document.getElementById('cache-status-text').innerText = "Edge Ready (0 KB Offline)";
@@ -799,6 +797,7 @@
     } catch (err) {
       console.error("Init Error:", err);
       alert("Model Init Error: " + err.message);
+      throw err;
     } finally {
       isInitializingModels = false;
       showLoading(false);
@@ -826,14 +825,18 @@
 
     updatePrecisionUI();
     showLoading(true, `Activating ${currentPrecision.toUpperCase()} model...`);
-    await initClientModels();
-
-    if (lastLoadedSource) {
-      showLoading(true, `Re-inferring with ${currentPrecision.toUpperCase()}...`);
-      const res = await runClientPipeline(lastLoadedSource);
-      updateUI(res);
+    try {
+      await initClientModels();
+      if (lastLoadedSource) {
+        showLoading(true, `Re-inferring with ${currentPrecision.toUpperCase()}...`);
+        const res = await runClientPipeline(lastLoadedSource);
+        updateUI(res);
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      showLoading(false);
     }
-    showLoading(false);
   }
 
   function updatePrecisionUI() {
@@ -884,7 +887,8 @@
     const s2Out = await s2_session.run({ images: s2Tensor });
     const s2Ms = performance.now() - tS2Start;
 
-    const outData = s2Out.output0.data;
+    const s2Key = Object.keys(s2Out)[0];
+    const outData = s2Out[s2Key].data;
     let maxConf = -1;
     let bestIdx = -1;
     for (let i = 0; i < 8400; i++) {
@@ -1026,35 +1030,53 @@
     };
   }
 
-  async function handleFileSelected(file) {
-    if (!file) return;
-    showLoading(true, "Reading image...");
+  // Reliable image reader with FileReader promise
+  function loadImageFromFile(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onerror = () => reject(new Error("Unable to read image file data."));
+      reader.onload = () => {
+        const img = new Image();
+        img.onerror = () => reject(new Error("File is not a valid image format."));
+        img.onload = () => resolve(img);
+        img.src = reader.result;
+      };
+      reader.readAsDataURL(file);
+    });
+  }
 
-    const img = new Image();
-    const url = URL.createObjectURL(file);
-    img.onload = async () => {
-      showLoading(true, "Executing Edge Vision Pipeline...");
-      try {
-        const res = await runClientPipeline(img);
-        updateUI(res);
-      } catch (err) {
-        alert("Error: " + err.message);
-      } finally {
-        URL.revokeObjectURL(url);
-        showLoading(false);
-      }
-    };
-    img.src = url;
+  async function handleFileFromInput(file) {
+    if (!file) return;
+    showLoading(true, "Reading image file...");
+    try {
+      const img = await loadImageFromFile(file);
+      showLoading(true, "Executing Edge AMR Pipeline...");
+      const res = await runClientPipeline(img);
+      updateUI(res);
+    } catch (err) {
+      console.error(err);
+      alert("Error: " + err.message);
+    } finally {
+      showLoading(false);
+    }
   }
 
   async function loadSample(sampleUrl) {
-    showLoading(true, "Loading sample...");
+    showLoading(true, "Loading sample preset...");
     try {
       const resp = await fetch(sampleUrl);
+      if (!resp.ok) {
+        throw new Error(`HTTP ${resp.status} - Sample file not accessible`);
+      }
       const blob = await resp.blob();
-      await handleFileSelected(blob);
+      const img = await loadImageFromFile(blob);
+      showLoading(true, "Executing Edge AMR Pipeline...");
+      const res = await runClientPipeline(img);
+      updateUI(res);
     } catch (err) {
+      console.error(err);
       alert("Error loading sample: " + err.message);
+    } finally {
       showLoading(false);
     }
   }

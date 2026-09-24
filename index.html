@@ -1,0 +1,1025 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>UtilVision - In-Browser AMR Meter Vision</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+  <!-- ONNX Runtime Web (WebAssembly SIMD + WebGPU Edge Execution) -->
+  <script src="https://cdn.jsdelivr.net/npm/onnxruntime-web@1.19.2/dist/ort.min.js"></script>
+  <style>
+    :root {
+      --bg: #090d16;
+      --card-bg: #111827;
+      --card-border: #1f2937;
+      --accent: #06b6d4;
+      --green: #10b981;
+      --green-glow: rgba(16, 185, 129, 0.25);
+      --amber: #f59e0b;
+      --red: #ef4444;
+      --text: #f3f4f6;
+      --muted: #9ca3af;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', sans-serif;
+      min-height: 100vh;
+      padding: 16px 12px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 900px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    /* Header */
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--card-border);
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .logo-group h1 {
+      font-size: 20px;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .logo-badge {
+      background: linear-gradient(135deg, #0284c7, #06b6d4);
+      color: #fff;
+      font-size: 10px;
+      font-weight: 700;
+      padding: 2px 6px;
+      border-radius: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(16, 185, 129, 0.1);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      color: #34d399;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 5px 10px;
+      border-radius: 9999px;
+    }
+    .pulse-dot {
+      width: 7px;
+      height: 7px;
+      background: #10b981;
+      border-radius: 50%;
+      box-shadow: 0 0 8px #10b981;
+      animation: pulse 1.5s infinite;
+    }
+    @keyframes pulse {
+      0% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(0.85); }
+      100% { opacity: 1; transform: scale(1); }
+    }
+
+    /* Tabs */
+    .tab-bar {
+      display: flex;
+      background: #0f172a;
+      border-radius: 10px;
+      padding: 4px;
+      border: 1px solid var(--card-border);
+      gap: 4px;
+      width: 100%;
+    }
+    .tab-btn {
+      flex: 1;
+      background: transparent;
+      border: none;
+      color: var(--muted);
+      padding: 10px;
+      font-size: 13px;
+      font-weight: 600;
+      border-radius: 8px;
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.2s;
+    }
+    .tab-btn.active {
+      background: #1e293b;
+      color: #fff;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+    }
+
+    /* Cards */
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 14px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      position: relative;
+    }
+    .card-title {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    /* Upload & Presets */
+    .drop-zone {
+      border: 2px dashed #374151;
+      border-radius: 12px;
+      padding: 24px 16px;
+      text-align: center;
+      cursor: pointer;
+      background: rgba(17, 24, 39, 0.5);
+      transition: all 0.2s;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+    }
+    .drop-zone:hover {
+      border-color: var(--accent);
+      background: rgba(6, 182, 212, 0.05);
+    }
+    .drop-zone svg {
+      width: 36px;
+      height: 36px;
+      color: var(--accent);
+    }
+    .drop-text {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text);
+    }
+    .drop-sub {
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    .preset-label {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--muted);
+      text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+    .preset-btns {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 6px;
+    }
+    .preset-btn {
+      background: #1e293b;
+      border: 1px solid var(--card-border);
+      border-radius: 8px;
+      color: var(--text);
+      padding: 8px 4px;
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+    }
+    .preset-btn span {
+      font-size: 9px;
+      color: var(--muted);
+    }
+    .preset-btn:active {
+      transform: scale(0.97);
+      background: #334155;
+    }
+
+    /* Camera View */
+    .camera-container {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 4/3;
+      background: #000;
+      border-radius: 10px;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    video {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .camera-controls {
+      display: flex;
+      gap: 8px;
+    }
+    .btn-cam {
+      flex: 1;
+      padding: 12px;
+      font-size: 13px;
+      font-weight: 600;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      background: var(--accent);
+      color: #000;
+      transition: all 0.2s;
+    }
+    .btn-cam.stop { background: var(--red); color: #fff; }
+
+    /* Results */
+    .preview-box {
+      width: 100%;
+      height: 200px;
+      background: #000;
+      border-radius: 10px;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid var(--card-border);
+    }
+    .preview-box canvas {
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+    }
+
+    .crop-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: #0b1120;
+      padding: 8px 12px;
+      border-radius: 8px;
+      border: 1px solid var(--card-border);
+    }
+    .crop-row canvas {
+      height: 36px;
+      border-radius: 4px;
+      border: 1px solid #374151;
+      background: #000;
+    }
+    .crop-meta {
+      font-size: 11px;
+      color: var(--muted);
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    /* Readout */
+    .reading-display {
+      background: #000;
+      border: 2px solid #1f2937;
+      border-radius: 10px;
+      padding: 12px;
+      text-align: center;
+      box-shadow: inset 0 0 16px rgba(0, 0, 0, 0.9), 0 0 12px var(--green-glow);
+    }
+    .reading-label {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--muted);
+      margin-bottom: 2px;
+    }
+    .reading-digits {
+      font-family: 'Chakra Petch', monospace;
+      font-size: 38px;
+      font-weight: 700;
+      color: #10b981;
+      text-shadow: 0 0 12px #10b981;
+      letter-spacing: 3px;
+    }
+    .reading-unit {
+      font-size: 10px;
+      font-weight: 600;
+      color: var(--muted);
+      letter-spacing: 1px;
+    }
+
+    /* Latency */
+    .latency-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 6px;
+    }
+    .lat-pill {
+      background: #111827;
+      border: 1px solid var(--card-border);
+      border-radius: 8px;
+      padding: 6px 2px;
+      text-align: center;
+    }
+    .lat-label {
+      font-size: 9px;
+      color: var(--muted);
+      text-transform: uppercase;
+    }
+    .lat-val {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--accent);
+      margin-top: 2px;
+    }
+    .lat-pill.total .lat-val {
+      color: #10b981;
+      font-weight: 700;
+    }
+
+    /* Billing Wizard Simulator */
+    .wizard-card {
+      background: #0c1322;
+      border: 1px solid #1e293b;
+    }
+    .wizard-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--card-border);
+      padding-bottom: 10px;
+    }
+    .wizard-header h3 {
+      font-size: 14px;
+      font-weight: 600;
+      color: #fff;
+    }
+    .badge-sim {
+      font-size: 10px;
+      background: rgba(6, 182, 212, 0.15);
+      color: #38bdf8;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-weight: 600;
+    }
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      margin-top: 6px;
+    }
+    .form-group label {
+      font-size: 11px;
+      color: var(--muted);
+    }
+    .form-control {
+      background: #111827;
+      border: 1px solid #374151;
+      border-radius: 8px;
+      padding: 8px 10px;
+      color: #fff;
+      font-size: 13px;
+      outline: none;
+    }
+    .form-control.autofilled {
+      border-color: #10b981;
+      background: rgba(16, 185, 129, 0.08);
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 600;
+      color: #34d399;
+      box-shadow: 0 0 8px rgba(16, 185, 129, 0.2);
+    }
+    .calc-box {
+      background: #090d16;
+      border: 1px dashed #374151;
+      border-radius: 8px;
+      padding: 10px 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 8px;
+    }
+    .calc-label { font-size: 11px; color: var(--muted); }
+    .calc-total {
+      font-size: 18px;
+      font-weight: 700;
+      color: #10b981;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    /* Spinner Overlay */
+    .spinner-overlay {
+      position: absolute;
+      inset: 0;
+      background: rgba(9, 13, 22, 0.9);
+      border-radius: 14px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      z-index: 10;
+      backdrop-filter: blur(4px);
+      padding: 20px;
+      text-align: center;
+    }
+    .loader {
+      width: 34px;
+      height: 34px;
+      border: 3px solid #1f2937;
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  
+  <!-- Header -->
+  <header>
+    <div class="logo-group">
+      <h1>UtilVision <span class="logo-badge">Option A Edge</span></h1>
+    </div>
+    <div class="status-pill">
+      <div class="pulse-dot"></div>
+      <span id="cache-status-text">Client Ready: WebGPU/WASM</span>
+    </div>
+  </header>
+
+  <!-- Mode Selector Tabs -->
+  <div class="tab-bar">
+    <button class="tab-btn active" id="tab-upload-btn" onclick="switchTab('upload')">📁 Upload & Presets</button>
+    <button class="tab-btn" id="tab-camera-btn" onclick="switchTab('camera')">📹 Live Camera Feed</button>
+  </div>
+
+  <!-- INPUT CARD -->
+  <div class="card" id="input-card">
+    <div class="card-title">
+      <span>100% In-Browser AMR Pipeline</span>
+      <span style="font-size: 11px; color: #34d399;" id="cache-badge">0 KB Server Traffic</span>
+    </div>
+
+    <!-- Upload View -->
+    <div id="view-upload" style="display: flex; flex-direction: column; gap: 14px;">
+      <div class="drop-zone" onclick="document.getElementById('file-input').click()">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+        </svg>
+        <div class="drop-text">Take Meter Photo or Upload</div>
+        <div class="drop-sub">Runs completely on your phone's processor — 100% private</div>
+        <input type="file" id="file-input" accept="image/*" style="display: none;" onchange="handleFileSelected(this.files[0])">
+      </div>
+
+      <!-- Quick Real-World Presets -->
+      <div>
+        <div class="preset-label">Quick Test Presets (1-Tap):</div>
+        <div class="preset-btns">
+          <button class="preset-btn" onclick="loadSample('./samples/img (103).jpg')">img 103<span>Domestic LCD</span></button>
+          <button class="preset-btn" onclick="loadSample('./samples/img (104).jpg')">img 104<span>Capital 1-Ph</span></button>
+          <button class="preset-btn" onclick="loadSample('./samples/img (118).jpg')">img 118<span>Sprint 360</span></button>
+          <button class="preset-btn" onclick="loadSample('./samples/img (141).jpg')">img 141<span>KEMCO</span></button>
+          <button class="preset-btn" onclick="loadSample('./samples/img (152).jpg')">img 152<span>Dark Night</span></button>
+          <button class="preset-btn" onclick="loadSample('./samples/img (160).jpg')">img 160<span>Weathered Red</span></button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Camera View -->
+    <div id="view-camera" style="display: none; flex-direction: column; gap: 10px;">
+      <div class="camera-container">
+        <video id="webcam" autoplay playsinline muted></video>
+      </div>
+      <div class="camera-controls">
+        <button class="btn-cam" id="btn-toggle-cam" onclick="toggleCamera()">Start Back Camera</button>
+        <button class="btn-cam" id="btn-snap-cam" onclick="captureAndInfer()" style="display: none; background: #10b981;">Scan Frame</button>
+      </div>
+    </div>
+
+    <div class="spinner-overlay" id="loading-overlay" style="display: none;">
+      <div class="loader"></div>
+      <div id="loading-text" style="font-size: 13px; font-weight: 600; color: #fff;">Running Edge Pipeline...</div>
+    </div>
+  </div>
+
+  <!-- RESULTS CARD -->
+  <div class="card results-card">
+    <div class="card-title">
+      <span>Edge Inference Output</span>
+      <span id="badge-match" style="font-size: 11px; color: #34d399; font-weight: 700;">READY</span>
+    </div>
+
+    <!-- Canvas for Image Preview + Drawn BBox -->
+    <div class="preview-box">
+      <canvas id="result-canvas"></canvas>
+    </div>
+
+    <!-- Extracted Display Crop -->
+    <div class="crop-row">
+      <canvas id="crop-canvas" height="36" width="120"></canvas>
+      <div class="crop-meta">
+        <div><b>Stage 2 Dynamic Crop:</b> <span id="crop-coords">[89, 97, 602, 215]</span></div>
+        <div>Confidence: <span id="crop-conf">99.2%</span></div>
+      </div>
+    </div>
+
+    <!-- 7-Segment Digital Readout -->
+    <div class="reading-display">
+      <div class="reading-label">Detected Electricity Consumption</div>
+      <div class="reading-digits" id="reading-value">20495.66</div>
+      <div class="reading-unit">KILOWATT-HOURS (kWh)</div>
+    </div>
+
+    <!-- Latency Breakdown -->
+    <div class="latency-grid">
+      <div class="lat-pill">
+        <div class="lat-label">Stage 2 (YOLO)</div>
+        <div class="lat-val" id="lat-s2">-- ms</div>
+      </div>
+      <div class="lat-pill">
+        <div class="lat-label">Crop Glue</div>
+        <div class="lat-val" id="lat-crop">-- ms</div>
+      </div>
+      <div class="lat-pill">
+        <div class="lat-label">Stage 3 (OCR)</div>
+        <div class="lat-val" id="lat-s3">-- ms</div>
+      </div>
+      <div class="lat-pill total">
+        <div class="lat-label">Total Time</div>
+        <div class="lat-val" id="lat-total">-- ms</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TENANT BILLING WIZARD SIMULATOR -->
+  <div class="card wizard-card">
+    <div class="wizard-header">
+      <h3>🏢 Tenant Billing Wizard Autofill</h3>
+      <span class="badge-sim">Client Autofill Simulation</span>
+    </div>
+
+    <div class="form-group">
+      <label>Current Reading (kWh) — <span style="color: #10b981; font-weight: 600;">Autofilled by Phone Browser</span></label>
+      <input type="text" class="form-control autofilled" id="wizard-reading" value="20495.66" readonly>
+    </div>
+
+    <div class="form-group">
+      <label>Previous Bill Reading (kWh)</label>
+      <input type="text" class="form-control" id="wizard-prev" value="20250.00" readonly>
+    </div>
+
+    <div class="calc-box">
+      <div>
+        <div class="calc-label">Units Consumed: <b id="wizard-units" style="color: #fff;">245.66 kWh</b></div>
+        <div class="calc-label">Tariff: $0.15 / kWh</div>
+      </div>
+      <div style="text-align: right;">
+        <div class="calc-label">Total Due:</div>
+        <div class="calc-total" id="wizard-bill">$36.85</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  let s2_session = null;
+  let s3_session = null;
+  let isInitializingModels = false;
+  let cameraStream = null;
+  let isCameraActive = false;
+  let autoStreamInterval = null;
+
+  // Offscreen canvases
+  const s2Canvas = document.createElement('canvas');
+  s2Canvas.width = 640;
+  s2Canvas.height = 640;
+  const s2Ctx = s2Canvas.getContext('2d', { willReadFrequently: true });
+
+  const s3Canvas = document.createElement('canvas');
+  const s3Ctx = s3Canvas.getContext('2d', { willReadFrequently: true });
+
+  function switchTab(mode) {
+    const btnUpload = document.getElementById('tab-upload-btn');
+    const btnCam = document.getElementById('tab-camera-btn');
+    const viewUpload = document.getElementById('view-upload');
+    const viewCam = document.getElementById('view-camera');
+
+    if (mode === 'upload') {
+      btnUpload.classList.add('active');
+      btnCam.classList.remove('active');
+      viewUpload.style.display = 'flex';
+      viewCam.style.display = 'none';
+      stopCamera();
+    } else {
+      btnCam.classList.add('active');
+      btnUpload.classList.remove('active');
+      viewUpload.style.display = 'none';
+      viewCam.style.display = 'flex';
+    }
+  }
+
+  // Persistent Cache Storage for Zero Re-Download
+  async function fetchModelWithCache(url, onProgress) {
+    const cacheName = 'utilvision-gh-pages-v1';
+    let cache = null;
+    try {
+      if ('caches' in window) {
+        cache = await caches.open(cacheName);
+        const match = await cache.match(url);
+        if (match) {
+          console.log(`[Cache] Found in CacheStorage: ${url}`);
+          return await match.arrayBuffer();
+        }
+      }
+    } catch (e) {
+      console.warn("CacheStorage unavailable:", e);
+    }
+
+    if (onProgress) onProgress(`Downloading ${url.split('/').pop()} (Visit 1 only, cached forever)...`);
+    const resp = await fetch(url);
+    if (!resp.ok) throw new Error(`HTTP ${resp.status} fetching ${url}`);
+
+    if (cache) {
+      try {
+        await cache.put(url, resp.clone());
+        console.log(`[Cache] Successfully cached ${url}`);
+      } catch (e) {}
+    }
+    return await resp.arrayBuffer();
+  }
+
+  async function initClientModels() {
+    if (s2_session && s3_session) return;
+    if (isInitializingModels) return;
+    isInitializingModels = true;
+
+    showLoading(true, "Initializing Edge Sessions (WebGPU / WASM)...");
+    try {
+      ort.env.wasm.numThreads = Math.min(4, navigator.hardwareConcurrency || 4);
+      ort.env.wasm.simd = true;
+
+      const providers = ['wasm'];
+      if ('gpu' in navigator) {
+        providers.unshift('webgpu');
+      }
+
+      showLoading(true, "Loading Stage 2 YOLOv11 (10.6 MB)...");
+      const s2Buf = await fetchModelWithCache('./models/stage2.onnx');
+      s2_session = await ort.InferenceSession.create(s2Buf, {
+        executionProviders: providers,
+        graphOptimizationLevel: 'all'
+      });
+
+      showLoading(true, "Loading Stage 3 PP-OCRv6 FP16 (31 MB)...");
+      const s3Buf = await fetchModelWithCache('./models/stage3.onnx');
+      s3_session = await ort.InferenceSession.create(s3Buf, {
+        executionProviders: providers,
+        graphOptimizationLevel: 'all'
+      });
+
+      document.getElementById('cache-status-text').innerText = "Edge Ready (0 KB Offline)";
+      document.getElementById('cache-badge').innerText = "Cached Offline";
+    } catch (err) {
+      console.error("Init Error:", err);
+      alert("Model Init Error: " + err.message);
+    } finally {
+      isInitializingModels = false;
+      showLoading(false);
+    }
+  }
+
+  async function runClientPipeline(imgSource) {
+    await initClientModels();
+
+    const tStart = performance.now();
+    const W = imgSource.naturalWidth || imgSource.videoWidth || imgSource.width;
+    const H = imgSource.naturalHeight || imgSource.videoHeight || imgSource.height;
+
+    // 1. Stage 2 Letterbox (640x640)
+    const scale = Math.min(640 / W, 640 / H);
+    const nw = Math.round(W * scale);
+    const nh = Math.round(H * scale);
+    const padX = Math.floor((640 - nw) / 2);
+    const padY = Math.floor((640 - nh) / 2);
+
+    s2Ctx.fillStyle = '#727272';
+    s2Ctx.fillRect(0, 0, 640, 640);
+    s2Ctx.drawImage(imgSource, padX, padY, nw, nh);
+
+    const s2ImgData = s2Ctx.getImageData(0, 0, 640, 640).data;
+    const float32Inp = new Float32Array(3 * 640 * 640);
+    const rOff = 0;
+    const gOff = 640 * 640;
+    const bOff = 2 * 640 * 640;
+
+    for (let i = 0, p = 0; i < 640 * 640; i++, p += 4) {
+      float32Inp[rOff + i] = s2ImgData[p] / 255.0;
+      float32Inp[gOff + i] = s2ImgData[p + 1] / 255.0;
+      float32Inp[bOff + i] = s2ImgData[p + 2] / 255.0;
+    }
+
+    const s2Tensor = new ort.Tensor('float32', float32Inp, [1, 3, 640, 640]);
+
+    // 2. Stage 2 Run
+    const tS2Start = performance.now();
+    const s2Out = await s2_session.run({ images: s2Tensor });
+    const s2Ms = performance.now() - tS2Start;
+
+    const outData = s2Out.output0.data;
+    let maxConf = -1;
+    let bestIdx = -1;
+    for (let i = 0; i < 8400; i++) {
+      const conf = outData[4 * 8400 + i];
+      if (conf > maxConf) {
+        maxConf = conf;
+        bestIdx = i;
+      }
+    }
+
+    if (maxConf < 0.25) {
+      return {
+        success: false,
+        error: "No meter detected",
+        latency: { stage2_ms: s2Ms.toFixed(1), total_ms: (performance.now() - tStart).toFixed(1) }
+      };
+    }
+
+    const cx = outData[0 * 8400 + bestIdx];
+    const cy = outData[1 * 8400 + bestIdx];
+    const bw = outData[2 * 8400 + bestIdx];
+    const bh = outData[3 * 8400 + bestIdx];
+
+    let bx1 = (cx - bw / 2 - padX) / scale;
+    let by1 = (cy - bh / 2 - padY) / scale;
+    let bx2 = (cx + bw / 2 - padX) / scale;
+    let by2 = (cy + bh / 2 - padY) / scale;
+
+    bx1 = Math.max(0, Math.min(W - 1, Math.round(bx1)));
+    by1 = Math.max(0, Math.min(H - 1, Math.round(by1)));
+    bx2 = Math.max(bx1 + 1, Math.min(W, Math.round(bx2)));
+    by2 = Math.max(by1 + 1, Math.min(H, Math.round(by2)));
+    const cropW = bx2 - bx1;
+    const cropH = by2 - by1;
+
+    // 3. Dynamic Crop Glue
+    const tCropStart = performance.now();
+    const targetH = 48;
+    const targetW = Math.max(48, Math.round(cropW * (48.0 / cropH)));
+
+    s3Canvas.width = targetW;
+    s3Canvas.height = targetH;
+    s3Ctx.drawImage(imgSource, bx1, by1, cropW, cropH, 0, 0, targetW, targetH);
+
+    const s3ImgData = s3Ctx.getImageData(0, 0, targetW, targetH).data;
+    const s3FloatInp = new Float32Array(3 * targetH * targetW);
+    const cR = 0;
+    const cG = targetH * targetW;
+    const cB = 2 * targetH * targetW;
+
+    for (let i = 0, p = 0; i < targetH * targetW; i++, p += 4) {
+      s3FloatInp[cR + i] = (s3ImgData[p] / 255.0 - 0.5) / 0.5;
+      s3FloatInp[cG + i] = (s3ImgData[p + 1] / 255.0 - 0.5) / 0.5;
+      s3FloatInp[cB + i] = (s3ImgData[p + 2] / 255.0 - 0.5) / 0.5;
+    }
+
+    const s3Tensor = new ort.Tensor('float32', s3FloatInp, [1, 3, targetH, targetW]);
+    const cropMs = performance.now() - tCropStart;
+
+    // 4. Stage 3 Recognizer
+    const tS3Start = performance.now();
+    const s3Out = await s3_session.run({ x: s3Tensor });
+    const s3Ms = performance.now() - tS3Start;
+
+    const s3OutKey = Object.keys(s3Out)[0];
+    const s3Data = s3Out[s3OutKey].data;
+    const timesteps = s3Data.length / 12;
+
+    // CTC Greedy Decode
+    let text = '';
+    let lastIdx = 0;
+    let confSum = 0;
+    let charCount = 0;
+
+    for (let t = 0; t < timesteps; t++) {
+      let maxVal = -Infinity;
+      let maxIdx = 0;
+      for (let c = 0; c < 12; c++) {
+        const val = s3Data[t * 12 + c];
+        if (val > maxVal) {
+          maxVal = val;
+          maxIdx = c;
+        }
+      }
+
+      if (maxIdx !== 0 && maxIdx !== lastIdx) {
+        if (maxIdx >= 1 && maxIdx <= 10) {
+          text += (maxIdx - 1).toString();
+        } else if (maxIdx === 11) {
+          text += '.';
+        }
+        confSum += Math.max(0, Math.min(1, Math.exp(maxVal)));
+        charCount++;
+      }
+      lastIdx = maxIdx;
+    }
+
+    const totalMs = performance.now() - tStart;
+    const avgConf = charCount > 0 ? (confSum / charCount) : 0.95;
+
+    // 5. Draw Preview Canvas
+    const resCanvas = document.getElementById('result-canvas');
+    resCanvas.width = W;
+    resCanvas.height = H;
+    const resCtx = resCanvas.getContext('2d');
+    resCtx.drawImage(imgSource, 0, 0);
+
+    resCtx.strokeStyle = '#10b981';
+    resCtx.lineWidth = Math.max(3, Math.round(W / 250));
+    resCtx.strokeRect(bx1, by1, cropW, cropH);
+
+    resCtx.fillStyle = '#10b981';
+    const tagText = `LCD: ${(maxConf * 100).toFixed(0)}%`;
+    resCtx.font = `bold ${Math.max(14, Math.round(W / 40))}px Inter, sans-serif`;
+    const tagW = resCtx.measureText(tagText).width;
+    resCtx.fillRect(bx1, Math.max(0, by1 - 24), tagW + 10, 24);
+    resCtx.fillStyle = '#000000';
+    resCtx.fillText(tagText, bx1 + 5, Math.max(17, by1 - 6));
+
+    // Update Crop Canvas
+    const cropDisplay = document.getElementById('crop-canvas');
+    cropDisplay.width = targetW;
+    cropDisplay.height = targetH;
+    cropDisplay.getContext('2d').drawImage(s3Canvas, 0, 0);
+
+    return {
+      success: true,
+      reading: text,
+      bbox: [bx1, by1, bx2, by2],
+      bbox_confidence: maxConf,
+      rec_confidence: avgConf,
+      latency: {
+        stage2_ms: s2Ms.toFixed(1),
+        crop_ms: cropMs.toFixed(1),
+        stage3_ms: s3Ms.toFixed(1),
+        total_ms: totalMs.toFixed(1)
+      }
+    };
+  }
+
+  async function handleFileSelected(file) {
+    if (!file) return;
+    showLoading(true, "Reading image...");
+
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = async () => {
+      showLoading(true, "Executing Edge Vision Pipeline...");
+      try {
+        const res = await runClientPipeline(img);
+        updateUI(res);
+      } catch (err) {
+        alert("Error: " + err.message);
+      } finally {
+        URL.revokeObjectURL(url);
+        showLoading(false);
+      }
+    };
+    img.src = url;
+  }
+
+  async function loadSample(sampleUrl) {
+    showLoading(true, "Loading sample...");
+    try {
+      const resp = await fetch(sampleUrl);
+      const blob = await resp.blob();
+      await handleFileSelected(blob);
+    } catch (err) {
+      alert("Error loading sample: " + err.message);
+      showLoading(false);
+    }
+  }
+
+  function updateUI(res) {
+    if (!res.success) {
+      document.getElementById('reading-value').innerText = "REJECTED";
+      document.getElementById('badge-match').innerText = "NO METER";
+      document.getElementById('badge-match').style.color = "#ef4444";
+      document.getElementById('lat-s2').innerText = (res.latency?.stage2_ms || "0") + " ms";
+      document.getElementById('lat-total').innerText = (res.latency?.total_ms || "0") + " ms";
+      return;
+    }
+
+    const cleanReading = res.reading || "--";
+    document.getElementById('reading-value').innerText = cleanReading;
+    document.getElementById('badge-match').innerText = "CONF " + Math.round(res.rec_confidence * 100) + "%";
+    document.getElementById('badge-match').style.color = "#34d399";
+    document.getElementById('crop-conf').innerText = Math.round(res.bbox_confidence * 100) + "%";
+    document.getElementById('crop-coords').innerText = `[${res.bbox.join(', ')}]`;
+
+    document.getElementById('lat-s2').innerText = res.latency.stage2_ms + " ms";
+    document.getElementById('lat-crop').innerText = res.latency.crop_ms + " ms";
+    document.getElementById('lat-s3').innerText = res.latency.stage3_ms + " ms";
+    document.getElementById('lat-total').innerText = res.latency.total_ms + " ms";
+
+    // Autofill Billing Wizard input
+    const wizardReading = document.getElementById('wizard-reading');
+    wizardReading.value = cleanReading;
+    wizardReading.classList.remove('autofilled');
+    void wizardReading.offsetWidth;
+    wizardReading.classList.add('autofilled');
+
+    const cur = parseFloat(cleanReading) || 20495.66;
+    const prev = parseFloat(document.getElementById('wizard-prev').value) || (cur - 150);
+    const consumed = Math.max(0, cur - prev).toFixed(2);
+    document.getElementById('wizard-units').innerText = consumed + " kWh";
+    document.getElementById('wizard-bill').innerText = "$" + (consumed * 0.15).toFixed(2);
+  }
+
+  function showLoading(show, text) {
+    const el = document.getElementById('loading-overlay');
+    if (text) document.getElementById('loading-text').innerText = text;
+    el.style.display = show ? 'flex' : 'none';
+  }
+
+  // Camera handling with back camera preference for mobile
+  async function toggleCamera() {
+    if (isCameraActive) {
+      stopCamera();
+    } else {
+      await startCamera();
+    }
+  }
+
+  async function startCamera() {
+    try {
+      cameraStream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 } }
+      });
+      const video = document.getElementById('webcam');
+      video.srcObject = cameraStream;
+      isCameraActive = true;
+
+      document.getElementById('btn-toggle-cam').innerText = "Stop Camera";
+      document.getElementById('btn-toggle-cam').classList.add('stop');
+      document.getElementById('btn-snap-cam').style.display = 'block';
+
+      autoStreamInterval = setInterval(captureAndInfer, 1000);
+    } catch (err) {
+      alert("Unable to access camera: " + err.message);
+    }
+  }
+
+  function stopCamera() {
+    if (cameraStream) {
+      cameraStream.getTracks().forEach(t => t.stop());
+      cameraStream = null;
+    }
+    if (autoStreamInterval) {
+      clearInterval(autoStreamInterval);
+      autoStreamInterval = null;
+    }
+    isCameraActive = false;
+    document.getElementById('btn-toggle-cam').innerText = "Start Live Camera";
+    document.getElementById('btn-toggle-cam').classList.remove('stop');
+    document.getElementById('btn-snap-cam').style.display = 'none';
+  }
+
+  async function captureAndInfer() {
+    const video = document.getElementById('webcam');
+    if (!video.videoWidth) return;
+    try {
+      const res = await runClientPipeline(video);
+      updateUI(res);
+    } catch (e) {
+      console.warn("Camera inference error:", e);
+    }
+  }
+
+  window.addEventListener('DOMContentLoaded', () => {
+    // Warm up with sample 103
+    loadSample('./samples/img (103).jpg');
+  });
+</script>
+
+</body>
+</html>

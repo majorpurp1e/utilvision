@@ -39,7 +39,7 @@
       max-width: 900px;
       display: flex;
       flex-direction: column;
-      gap: 16px;
+      gap: 14px;
     }
 
     /* Header */
@@ -96,6 +96,63 @@
       100% { opacity: 1; transform: scale(1); }
     }
 
+    /* Model Precision Bar */
+    .precision-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #0f172a;
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      padding: 8px 12px;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .precision-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .precision-title {
+      font-size: 11px;
+      color: var(--muted);
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+    .prec-btn {
+      background: transparent;
+      border: 1px solid #334155;
+      color: var(--muted);
+      padding: 5px 10px;
+      font-size: 11px;
+      font-weight: 600;
+      border-radius: 6px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.15s;
+    }
+    .prec-btn.active {
+      background: #1e293b;
+      color: #38bdf8;
+      border-color: #0284c7;
+      box-shadow: 0 0 10px rgba(2, 132, 199, 0.25);
+    }
+    .prec-tag {
+      background: rgba(14, 165, 233, 0.15);
+      color: #38bdf8;
+      padding: 1px 5px;
+      border-radius: 4px;
+      font-size: 9px;
+      font-weight: 700;
+    }
+    .prec-status {
+      font-size: 11px;
+      color: #94a3b8;
+    }
+
     /* Tabs */
     .tab-bar {
       display: flex;
@@ -111,8 +168,8 @@
       background: transparent;
       border: none;
       color: var(--muted);
-      padding: 10px;
-      font-size: 13px;
+      padding: 9px;
+      font-size: 12px;
       font-weight: 600;
       border-radius: 8px;
       cursor: pointer;
@@ -151,7 +208,7 @@
     .drop-zone {
       border: 2px dashed #374151;
       border-radius: 12px;
-      padding: 24px 16px;
+      padding: 22px 14px;
       text-align: center;
       cursor: pointer;
       background: rgba(17, 24, 39, 0.5);
@@ -166,8 +223,8 @@
       background: rgba(6, 182, 212, 0.05);
     }
     .drop-zone svg {
-      width: 36px;
-      height: 36px;
+      width: 34px;
+      height: 34px;
       color: var(--accent);
     }
     .drop-text {
@@ -465,6 +522,22 @@
     </div>
   </header>
 
+  <!-- Precision Toggle Bar -->
+  <div class="precision-bar">
+    <div class="precision-group">
+      <span class="precision-title">Stage 3 OCR:</span>
+      <button class="prec-btn active" id="btn-prec-fp16" onclick="setPrecision('fp16')">
+        <span class="prec-tag">⚡ Fast</span> FP16 (31 MB)
+      </button>
+      <button class="prec-btn" id="btn-prec-fp32" onclick="setPrecision('fp32')">
+        <span class="prec-tag" id="tag-fp32-status">🎯 Full</span> FP32 (62 MB)
+      </button>
+    </div>
+    <div class="prec-status" id="prec-status-text">
+      Active: FP16 Half (Fast, 31 MB)
+    </div>
+  </div>
+
   <!-- Mode Selector Tabs -->
   <div class="tab-bar">
     <button class="tab-btn active" id="tab-upload-btn" onclick="switchTab('upload')">📁 Upload & Presets</button>
@@ -560,7 +633,7 @@
         <div class="lat-val" id="lat-crop">-- ms</div>
       </div>
       <div class="lat-pill">
-        <div class="lat-label">Stage 3 (OCR)</div>
+        <div class="lat-label">Stage 3 (<span id="lat-prec-tag">FP16</span>)</div>
         <div class="lat-val" id="lat-s3">-- ms</div>
       </div>
       <div class="lat-pill total">
@@ -602,8 +675,12 @@
 </div>
 
 <script>
+  let currentPrecision = 'fp16'; // 'fp16' or 'fp32'
   let s2_session = null;
-  let s3_session = null;
+  let s3_fp16_session = null;
+  let s3_fp32_session = null;
+  let lastLoadedSource = null;
+
   let isInitializingModels = false;
   let cameraStream = null;
   let isCameraActive = false;
@@ -668,8 +745,19 @@
     return await resp.arrayBuffer();
   }
 
+  async function checkModelCached(url) {
+    try {
+      if ('caches' in window) {
+        const cache = await caches.open('utilvision-gh-pages-v1');
+        const match = await cache.match(url);
+        return !!match;
+      }
+    } catch(e){}
+    return false;
+  }
+
   async function initClientModels() {
-    if (s2_session && s3_session) return;
+    if (s2_session && (currentPrecision === 'fp16' ? s3_fp16_session : s3_fp32_session)) return;
     if (isInitializingModels) return;
     isInitializingModels = true;
 
@@ -679,23 +767,32 @@
       ort.env.wasm.simd = true;
 
       const providers = ['wasm'];
-      if ('gpu' in navigator) {
-        providers.unshift('webgpu');
+      if ('gpu' in navigator) providers.unshift('webgpu');
+
+      if (!s2_session) {
+        showLoading(true, "Loading Stage 2 YOLOv11 (10.6 MB)...");
+        const s2Buf = await fetchModelWithCache('./models/stage2.onnx', (m) => showLoading(true, m));
+        s2_session = await ort.InferenceSession.create(s2Buf, {
+          executionProviders: providers,
+          graphOptimizationLevel: 'all'
+        });
       }
 
-      showLoading(true, "Loading Stage 2 YOLOv11 (10.6 MB)...");
-      const s2Buf = await fetchModelWithCache('./models/stage2.onnx');
-      s2_session = await ort.InferenceSession.create(s2Buf, {
-        executionProviders: providers,
-        graphOptimizationLevel: 'all'
-      });
-
-      showLoading(true, "Loading Stage 3 PP-OCRv6 FP16 (31 MB)...");
-      const s3Buf = await fetchModelWithCache('./models/stage3.onnx');
-      s3_session = await ort.InferenceSession.create(s3Buf, {
-        executionProviders: providers,
-        graphOptimizationLevel: 'all'
-      });
+      if (currentPrecision === 'fp16' && !s3_fp16_session) {
+        showLoading(true, "Loading Stage 3 PP-OCRv6 FP16 (31 MB)...");
+        const s3Buf = await fetchModelWithCache('./models/stage3_fp16.onnx', (m) => showLoading(true, m));
+        s3_fp16_session = await ort.InferenceSession.create(s3Buf, {
+          executionProviders: providers,
+          graphOptimizationLevel: 'all'
+        });
+      } else if (currentPrecision === 'fp32' && !s3_fp32_session) {
+        showLoading(true, "Loading Stage 3 PP-OCRv6 Full FP32 (62 MB)...");
+        const s3Buf = await fetchModelWithCache('./models/stage3_fp32.onnx', (m) => showLoading(true, m));
+        s3_fp32_session = await ort.InferenceSession.create(s3Buf, {
+          executionProviders: providers,
+          graphOptimizationLevel: 'all'
+        });
+      }
 
       document.getElementById('cache-status-text').innerText = "Edge Ready (0 KB Offline)";
       document.getElementById('cache-badge').innerText = "Cached Offline";
@@ -708,7 +805,49 @@
     }
   }
 
+  // Precision Switcher Logic (FP16 vs FP32 on-demand)
+  async function setPrecision(prec) {
+    if (prec === currentPrecision) return;
+
+    if (prec === 'fp32') {
+      const isCached = await checkModelCached('./models/stage3_fp32.onnx');
+      if (!isCached) {
+        const proceed = confirm(
+          "Download Full Precision FP32 Model (62 MB)?\n\n" +
+          "• Downloads once and stays cached offline in your browser storage.\n" +
+          "• Ideal for maximum theoretical precision."
+        );
+        if (!proceed) return;
+      }
+      currentPrecision = 'fp32';
+    } else {
+      currentPrecision = 'fp16';
+    }
+
+    updatePrecisionUI();
+    showLoading(true, `Activating ${currentPrecision.toUpperCase()} model...`);
+    await initClientModels();
+
+    if (lastLoadedSource) {
+      showLoading(true, `Re-inferring with ${currentPrecision.toUpperCase()}...`);
+      const res = await runClientPipeline(lastLoadedSource);
+      updateUI(res);
+    }
+    showLoading(false);
+  }
+
+  function updatePrecisionUI() {
+    const isFp32 = currentPrecision === 'fp32';
+    document.getElementById('btn-prec-fp16').classList.toggle('active', !isFp32);
+    document.getElementById('btn-prec-fp32').classList.toggle('active', isFp32);
+    document.getElementById('lat-prec-tag').innerText = isFp32 ? 'FP32' : 'FP16';
+    document.getElementById('prec-status-text').innerText = isFp32 
+      ? 'Active: FP32 Full Precision (62 MB)' 
+      : 'Active: FP16 Half (Fast, 31 MB, Decimal-Safe)';
+  }
+
   async function runClientPipeline(imgSource) {
+    lastLoadedSource = imgSource;
     await initClientModels();
 
     const tStart = performance.now();
@@ -805,9 +944,10 @@
     const s3Tensor = new ort.Tensor('float32', s3FloatInp, [1, 3, targetH, targetW]);
     const cropMs = performance.now() - tCropStart;
 
-    // 4. Stage 3 Recognizer
+    // 4. Stage 3 Recognizer (Uses Active Session: FP16 or FP32)
+    const activeS3Session = (currentPrecision === 'fp32') ? s3_fp32_session : s3_fp16_session;
     const tS3Start = performance.now();
-    const s3Out = await s3_session.run({ x: s3Tensor });
+    const s3Out = await activeS3Session.run({ x: s3Tensor });
     const s3Ms = performance.now() - tS3Start;
 
     const s3OutKey = Object.keys(s3Out)[0];
@@ -1015,7 +1155,12 @@
     }
   }
 
-  window.addEventListener('DOMContentLoaded', () => {
+  window.addEventListener('DOMContentLoaded', async () => {
+    // Check if FP32 was already cached
+    const fp32Cached = await checkModelCached('./models/stage3_fp32.onnx');
+    if (fp32Cached) {
+      document.getElementById('tag-fp32-status').innerText = '🎯 Cached';
+    }
     // Warm up with sample 103
     loadSample('./samples/img (103).jpg');
   });

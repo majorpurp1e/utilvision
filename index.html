@@ -1172,6 +1172,15 @@
     }
   }
 
+  // Wrapper called by the new labelled file inputs (camera + gallery)
+  function handleFileInputChange(inputEl) {
+    const file = inputEl && inputEl.files && inputEl.files[0];
+    if (!file) return;
+    // Reset input so same file can be re-selected
+    inputEl.value = '';
+    handleFileFromInput(file);
+  }
+
   async function loadSample(sampleUrl) {
     showLoading(true, "Loading sample preset...");
     try {
@@ -1294,6 +1303,31 @@
     if (fp32Cached) {
       document.getElementById('tag-fp32-status').innerText = '🎯 Cached';
     }
+
+    // Wire up drag-and-drop on the drop zone
+    const dropZone = document.getElementById('drop-zone-area');
+    if (dropZone) {
+      ['dragenter', 'dragover'].forEach(ev => {
+        dropZone.addEventListener(ev, e => {
+          e.preventDefault();
+          e.stopPropagation();
+          dropZone.classList.add('drag-active');
+        });
+      });
+      ['dragleave', 'dragend'].forEach(ev => {
+        dropZone.addEventListener(ev, e => {
+          dropZone.classList.remove('drag-active');
+        });
+      });
+      dropZone.addEventListener('drop', e => {
+        e.preventDefault();
+        e.stopPropagation();
+        dropZone.classList.remove('drag-active');
+        const file = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+        if (file) handleFileFromInput(file);
+      });
+    }
+
     // Warm up with sample 103
     loadSample('./samples/img (103).jpg');
   });

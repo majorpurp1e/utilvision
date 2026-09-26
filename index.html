@@ -793,13 +793,20 @@ ort.env.wasm.proxy = false;
 ort.env.wasm.wasmPaths = 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.21.0/dist/';
 
 // ── Provider Detection ─────────────────────────────────────────────────────
-// Three-tier cascade: WebGPU -> WASM multi-thread -> WASM single-thread
-// detectedProvider: best provider confirmed at startup via GPU adapter probe
-// activeProvider:   what is actually serving inference right now
-let detectedProvider = 'wasm'; // updated after async GPU probe completes
+// Desktop: WebGPU -> WASM multi-thread -> WASM single-thread
+// Mobile:  WASM multi-thread -> WASM single-thread (WebGPU skipped)
+//
+// Mobile WebGPU (Adreno/Apple GPU in browser) silently produces numerically
+// wrong output for our model architectures despite appearing to run correctly.
+// Desktop GPU drivers (NVIDIA/AMD/Intel via Chrome/Edge) work reliably.
+let detectedProvider = 'wasm';
 let activeProvider = 'wasm';
 
+// True for Android and iOS phones/tablets
+const isMobileBrowser = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+
 async function probeWebGPU() {
+  if (isMobileBrowser) return false; // skip - mobile WebGPU drivers produce wrong results
   if (typeof navigator === 'undefined' || !navigator.gpu) return false;
   try {
     const adapter = await navigator.gpu.requestAdapter({ powerPreference: 'high-performance' });

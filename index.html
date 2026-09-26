@@ -10,7 +10,7 @@
 <meta property="og:type" content="website">
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='18' fill='%230f172a'/%3E%3Ctext x='50' y='68' font-size='58' text-anchor='middle' fill='%2310b981' font-family='monospace'%3E7%3C/text%3E%3C/svg%3E">
-<script src="https://cdn.jsdelivr.net/npm/onnxruntime-web@1.19.2/dist/ort.min.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/onnxruntime-web@1.19.2/dist/ort.webgpu.min.js" crossorigin="anonymous"></script>
 <style>
   :root {
     --bg: #090d16;
@@ -784,12 +784,50 @@
 </footer>
 
 <script>
-// Runtime threading configuration
+// ── Runtime Configuration ──────────────────────────────────────────────────
+// WASM fallback config (used whenever GPU is unavailable or fails)
 const numHardwareThreads = (typeof self !== 'undefined' && self.crossOriginIsolated)
   ? (navigator.hardwareConcurrency || 4) : 1;
 ort.env.wasm.numThreads = numHardwareThreads;
 ort.env.wasm.proxy = false;
 ort.env.wasm.wasmPaths = 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.19.2/dist/';
+
+// ── Provider Detection ─────────────────────────────────────────────────────
+// Three-tier cascade: WebGPU -> WASM multi-thread -> WASM single-thread
+// detectedProvider: best provider confirmed at startup via GPU adapter probe
+// activeProvider:   what is actually serving inference right now
+let detectedProvider = 'wasm'; // updated after async GPU probe completes
+let activeProvider = 'wasm';
+
+async function probeWebGPU() {
+  if (typeof navigator === 'undefined' || !navigator.gpu) return false;
+  try {
+    const adapter = await navigator.gpu.requestAdapter({ powerPreference: 'high-performance' });
+    return !!adapter;
+  } catch (e) {
+    return false;
+  }
+}
+
+function updateBackendBadge() {
+  if (activeProvider === 'webgpu') {
+    backendBadge.textContent = 'Engine: WebGPU (GPU Accelerated)';
+    backendBadge.style.background = 'rgba(6,182,212,0.15)';
+    backendBadge.style.borderColor = 'rgba(6,182,212,0.5)';
+    backendBadge.style.color = '#06b6d4';
+  } else if (numHardwareThreads > 1) {
+    backendBadge.textContent = `Engine: WASM (${numHardwareThreads} threads)`;
+    backendBadge.style.background = '';
+    backendBadge.style.borderColor = '';
+    backendBadge.style.color = '';
+  } else {
+    backendBadge.textContent = 'Engine: WASM (1 thread)';
+    backendBadge.style.background = '';
+    backendBadge.style.borderColor = '';
+    backendBadge.style.color = '';
+  }
+}
+
 
 const MODEL_CACHE = 'utilvision-models-v1';
 const DETECT_EVERY = 5;
@@ -924,14 +962,62 @@ async function fetchModelWithProgress(url, label) {
 async function getSession(key, url, label) {
   if (!sessions[key]) {
     const buffer = await fetchModelWithProgress(url, label);
+
+    if (detectedProvider === 'webgpu') {
+      // --- Try WebGPU first ---
+      progressLabel.textContent = `Compiling ${label}...`;
+      progressSub.textContent = 'Loading GPU shaders. This takes a moment on first run.';
+      progressFill.style.width = '100%';
+      try {
+        sessions[key] = await ort.InferenceSession.create(buffer, {
+          executionProviders: ['webgpu']
+        });
+        activeProvider = 'webgpu';
+        updateBackendBadge();
+        progressWrap.style.display = 'none';
+        return sessions[key];
+      } catch (gpuErr) {
+        // WebGPU failed (context lost, OOM, unsupported op) - fall through to WASM
+        console.warn('[UtilVision] WebGPU session failed, falling back to WASM:', gpuErr.message);
+        delete sessions[key];
+        detectedProvider = 'wasm'; // prevent future WebGPU attempts this session
+        activeProvider = 'wasm';
+        updateBackendBadge();
+      }
+    }
+
+    // --- WASM fallback (always works) ---
     progressLabel.textContent = `Compiling ${label}...`;
-    progressSub.textContent = 'Initializing WebAssembly execution provider...';
+    progressSub.textContent = `Initializing WASM execution provider (${numHardwareThreads} thread${numHardwareThreads > 1 ? 's' : ''})...`;
     progressFill.style.width = '100%';
-    sessions[key] = await ort.InferenceSession.create(buffer, { executionProviders: ['wasm'] });
+    sessions[key] = await ort.InferenceSession.create(buffer, {
+      executionProviders: ['wasm']
+    });
     progressWrap.style.display = 'none';
   }
   return sessions[key];
 }
+
+// Wraps session.run() with automatic WebGPU->WASM recovery on GPU context loss
+async function safeRun(key, url, label, feeds) {
+  let session = await getSession(key, url, label);
+  try {
+    return await session.run(feeds);
+  } catch (runErr) {
+    // GPU context loss or driver eviction: delete session and retry on WASM
+    if (activeProvider === 'webgpu') {
+      console.warn('[UtilVision] GPU inference error, evicting session and retrying on WASM:', runErr.message);
+      delete sessions[key];
+      detectedProvider = 'wasm';
+      activeProvider = 'wasm';
+      updateBackendBadge();
+      session = await getSession(key, url, label);
+      return await session.run(feeds);
+    }
+    throw runErr; // WASM failure is a real error, bubble up
+  }
+}
+
 
 async function updateCacheStatusUI() {
   const cache = await openCache();
@@ -1109,8 +1195,8 @@ async function runPipelineOnImage(img) {
 
 // Stage 2: LCD Region Detection (with Conditional Cascade TTA for photos)
 async function executeDetection(source, W, H, allowTTA = false) {
-  const session = await getSession('s2', 'models/stage2.onnx', 'Stage 2 Detector (10.6 MB)');
   let totalDetMs = 0;
+  const S2_KEY = 's2', S2_URL = 'models/stage2.onnx', S2_LABEL = 'Stage 2 Detector (10.6 MB)';
 
   async function evaluateWindow(sx, sy, sw, sh) {
     const scale = Math.min(640 / sw, 640 / sh);
@@ -1132,7 +1218,8 @@ async function executeDetection(source, W, H, allowTTA = false) {
 
     const tensor = new ort.Tensor('float32', f32, [1, 3, 640, 640]);
     const tStart = performance.now();
-    const outputs = await session.run({ images: tensor });
+    // safeRun handles GPU->WASM fallback automatically on context loss
+    const outputs = await safeRun(S2_KEY, S2_URL, S2_LABEL, { images: tensor });
     totalDetMs += (performance.now() - tStart);
 
     const outData = outputs.output0.data;
@@ -1185,6 +1272,7 @@ async function executeDetection(source, W, H, allowTTA = false) {
   return { error: 'No meter display found in frame.', detMs: totalDetMs };
 }
 
+
 // Stage 2.5 + Stage 3: Dynamic aspect crop (96px height) + CTC Sequence Recognition
 async function executeRecognition(source, box) {
   const { bx1, by1, cropW, cropH } = box;
@@ -1212,10 +1300,10 @@ async function executeRecognition(source, box) {
   const tensor = new ort.Tensor('float32', f32, [1, 3, targetH, targetW]);
   const modelName = `stage3_${activeSessionPrecision}.onnx`;
   const label = activeSessionPrecision === 'fp16' ? 'Stage 3 Recognizer (FP16, 31 MB)' : 'Stage 3 Recognizer (FP32, 62 MB)';
-  const session = await getSession(`s3_${activeSessionPrecision}`, `models/${modelName}`, label);
+  const s3Key = `s3_${activeSessionPrecision}`;
 
   const tStart = performance.now();
-  const outputs = await session.run({ x: tensor });
+  const outputs = await safeRun(s3Key, `models/${modelName}`, label, { x: tensor });
   const recMs = performance.now() - tStart;
 
   const outKey = Object.keys(outputs)[0];
@@ -1386,21 +1474,32 @@ async function liveCameraLoop() {
   }
 }
 
-// Initial engine status check
-if (typeof self !== 'undefined' && self.crossOriginIsolated) {
-  backendBadge.textContent = `Engine: WASM (${numHardwareThreads} threads)`;
-} else {
-  backendBadge.textContent = 'Engine: WASM (1 thread)';
-}
+// ── Startup Sequence ──────────────────────────────────────────────────────
+// Run GPU probe and model prefetch asynchronously so the UI is never blocked.
 updateCacheStatusUI();
+updateBackendBadge(); // initial: shows WASM while probe runs
 
-// Prefetch base weights in background
-(window.requestIdleCallback || (cb => setTimeout(cb, 400)))(async () => {
-  try {
-    await getSession('s2', 'models/stage2.onnx', 'Stage 2 Detector (10.6 MB)');
-    await getSession('s3_fp16', 'models/stage3_fp16.onnx', 'Stage 3 Recognizer (FP16, 31 MB)');
-  } catch(e){}
-});
+(async () => {
+  // 1. Probe for WebGPU adapter (resolves in <50ms on any browser)
+  const hasGPU = await probeWebGPU();
+  if (hasGPU) {
+    detectedProvider = 'webgpu';
+    updateBackendBadge(); // flips to "WebGPU (GPU Accelerated)" immediately
+  }
+
+  // 2. Prefetch and compile both models in background via idle callback.
+  //    On WebGPU devices this compiles WGSL shaders now so first inference is instant.
+  //    On WASM devices this warms the WASM JIT so first inference is instant.
+  (window.requestIdleCallback || (cb => setTimeout(cb, 400)))(async () => {
+    try {
+      await getSession('s2', 'models/stage2.onnx', 'Stage 2 Detector (10.6 MB)');
+      await getSession('s3_fp16', 'models/stage3_fp16.onnx', 'Stage 3 Recognizer (FP16, 31 MB)');
+    } catch (e) {
+      // Prefetch failure is non-fatal; sessions will be created on first user action
+      console.warn('[UtilVision] Background prefetch failed:', e.message);
+    }
+  });
+})();
 </script>
 
 </body>

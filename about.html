@@ -257,9 +257,9 @@
     line-height: 1.45;
   }
   .p-bullet {
-    color: var(--green);
+    color: var(--cyan);
     font-weight: 700;
-    font-size: 0.95rem;
+    font-size: 1.1rem;
     line-height: 1.2;
     flex-shrink: 0;
   }
@@ -273,33 +273,29 @@
     background: #0b111c;
     border: 1px solid #1e293b;
     border-radius: 8px;
-    padding: 12px;
+    padding: 14px;
     text-align: left;
-  }
-  .callout-card .c-icon {
-    font-size: 1.1rem;
-    margin-bottom: 6px;
-    display: block;
   }
   .callout-card .c-title {
     font-size: 0.72rem;
     text-transform: uppercase;
-    letter-spacing: 0.04em;
-    color: var(--muted);
+    letter-spacing: 0.05em;
+    color: var(--cyan);
     font-weight: 600;
-    margin-bottom: 4px;
+    margin-bottom: 6px;
+    font-family: 'SF Mono', Consolas, monospace;
   }
   .callout-card .c-val {
-    font-size: 0.95rem;
+    font-size: 1.15rem;
     font-weight: 700;
     color: var(--green);
-    margin-bottom: 3px;
+    margin-bottom: 4px;
     font-family: 'SF Mono', Consolas, monospace;
   }
   .callout-card .c-sub {
-    font-size: 0.74rem;
+    font-size: 0.76rem;
     color: #94a3b8;
-    line-height: 1.35;
+    line-height: 1.4;
   }
   /* Interactive Evolution Graph */
   .evo-card {
@@ -1389,15 +1385,15 @@
       <h4>Strict Physical Meter-Grouped Stratification Protocol</h4>
       <div class="protocol-points">
         <div class="protocol-point">
-          <span class="p-bullet">✓</span>
+          <span class="p-bullet">&bull;</span>
           <div><strong>Physical Meter Partitioning:</strong> Splits are grouped strictly by unique meter hardware identifier. Images of any single physical meter exist exclusively within train, validation, or the test split.</div>
         </div>
         <div class="protocol-point">
-          <span class="p-bullet">✓</span>
+          <span class="p-bullet">&bull;</span>
           <div><strong>150-Meter Held-Out Corpus:</strong> Completely unseen utility equipment ensures unbiased zero-leakage evaluation.</div>
         </div>
         <div class="protocol-point">
-          <span class="p-bullet">✓</span>
+          <span class="p-bullet">&bull;</span>
           <div><strong>Verbatim Ledger Equality:</strong> Scored on exact character, decimal point, and leading-zero equality without fuzzy numeric tolerance.</div>
         </div>
       </div>
@@ -1546,7 +1542,7 @@
         <button class="gen-pill" onclick="selectGeneration(6)">Gen 7</button>
         <button class="gen-pill" onclick="selectGeneration(7)">Gen 8</button>
         <button class="gen-pill" onclick="selectGeneration(8)">Gen 9</button>
-        <button class="gen-pill star active" onclick="selectGeneration(9)">Gen 10 (SOTA) ★</button>
+        <button class="gen-pill star active" onclick="selectGeneration(9)">Gen 10 (SOTA)</button>
       </div>
 
       <!-- Stage Detail Card -->
@@ -1911,25 +1907,21 @@
     <!-- 4 High-Impact Highlight Cards -->
     <div class="callout-grid">
       <div class="callout-card">
-        <span class="c-icon">⚡</span>
         <div class="c-title">Inference Speed</div>
         <div class="c-val">78.7 ms</div>
         <div class="c-sub">15x to 30x faster than cloud API roundtrips (1.1s to 2.2s).</div>
       </div>
       <div class="callout-card">
-        <span class="c-icon">💰</span>
         <div class="c-title">Ongoing Cost</div>
         <div class="c-val">$0.00</div>
         <div class="c-sub">Zero per-read fees (vs $1.50 to $2.50+ per 1k on Cloud Vision).</div>
       </div>
       <div class="callout-card">
-        <span class="c-icon">📶</span>
         <div class="c-title">Field Reliability</div>
         <div class="c-val">100% Offline</div>
         <div class="c-sub">Guaranteed operation in concrete basements and utility shafts.</div>
       </div>
       <div class="callout-card">
-        <span class="c-icon">🔒</span>
         <div class="c-title">Data Privacy</div>
         <div class="c-val">Client-Only</div>
         <div class="c-sub">Zero customer meter photos ever leave the local device.</div>

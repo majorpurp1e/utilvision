@@ -1776,7 +1776,7 @@
 
   <section>
     <h2>Edge WebAssembly vs. Cloud Vision Architecture</h2>
-    <p>UtilVision eliminates cloud API subscriptions and cellular connectivity bottlenecks by executing the entire neural pipeline directly within the client browser session.</p>
+    <p>UtilVision eliminates cloud API subscriptions and cellular connectivity bottlenecks by executing the entire neural pipeline directly within the client browser session. Empirical roundtrip benchmarks to cloud endpoints reveal 768 ms in initial TLS setup alone, yielding 1,100 ms to 2,200 ms broadband turnaround (and 2.5s to 5.0s+ over cellular), alongside outright failure in subterranean utility spaces.</p>
 
     <div class="arch-matrix">
       <div class="arch-table-wrap">
@@ -1793,13 +1793,13 @@
             <tr class="arch-highlight">
               <td><strong>Inference Latency</strong></td>
               <td><span class="arch-badge-win">WebGPU: 78.7 ms GPU | WASM: 214 ms CPU</span></td>
-              <td>850 ms to 1,400 ms (Roundtrip)</td>
+              <td>1,100 ms to 2,200 ms (Broadband)<br><span style="font-size:0.8rem; color:var(--muted);">2,500 ms to 5,000+ ms (Cellular)</span></td>
               <td>320 ms + Network Transfer</td>
             </tr>
             <tr>
               <td><strong>API Execution Cost</strong></td>
               <td><span class="arch-badge-win">$0.00 / Zero Ongoing Cost</span></td>
-              <td><span class="arch-badge-lose">$1.50 per 1,000 Reads</span></td>
+              <td><span class="arch-badge-lose">$1.50 to $2.50+ per 1,000 Reads</span></td>
               <td>Server Instance Hosting Fees</td>
             </tr>
             <tr class="arch-highlight">

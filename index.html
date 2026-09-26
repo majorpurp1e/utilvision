@@ -1003,18 +1003,18 @@ async function getSession(key, url, label) {
   return sessions[key];
 }
 
-// Wraps session.run() with automatic WebGPU->WASM recovery on GPU context loss mid-inference
+// Wraps session.run() with WebGPU->WASM fallback on:
+//   (a) thrown errors (GPU context loss, OOM)
+//   (b) silent numerical corruption (all-zero/NaN output - common on mobile GPU drivers)
 async function safeRun(key, url, label, feeds) {
   let session = await getSession(key, url, label);
+
+  let result;
   try {
-    return await session.run(feeds);
+    result = await session.run(feeds);
   } catch (runErr) {
     if (activeProvider === 'webgpu') {
-      const msg = runErr.message || String(runErr);
-      console.warn('[UtilVision] GPU run failed:', msg);
-      // Show error visibly for diagnosis
-      statusMessage.textContent = '[WebGPU run] ' + msg;
-      statusMessage.className = 'status-text warn';
+      console.warn('[UtilVision] GPU run threw, falling back to WASM:', runErr.message);
       delete sessions[key];
       detectedProvider = 'wasm';
       activeProvider = 'wasm';
@@ -1024,7 +1024,36 @@ async function safeRun(key, url, label, feeds) {
     }
     throw runErr;
   }
+
+  // Validate output for silent GPU numerical corruption.
+  // A legitimate model output will always have at least one value with |v| > 1e-4.
+  // All-zero or all-NaN output means the GPU driver produced garbage silently.
+  if (activeProvider === 'webgpu') {
+    const firstOutput = Object.values(result)[0]?.data;
+    if (firstOutput) {
+      let maxAbs = 0, hasNaN = false;
+      const sampleLen = Math.min(firstOutput.length, 500);
+      for (let i = 0; i < sampleLen; i++) {
+        if (isNaN(firstOutput[i])) { hasNaN = true; break; }
+        if (Math.abs(firstOutput[i]) > maxAbs) maxAbs = Math.abs(firstOutput[i]);
+      }
+      if (hasNaN || maxAbs < 1e-4) {
+        console.warn('[UtilVision] GPU output corrupt (maxAbs=' + maxAbs + ', NaN=' + hasNaN + '), evicting GPU session');
+        // Permanently fall back to WASM for this page session -
+        // mobile GPU driver is producing wrong numbers
+        delete sessions[key];
+        detectedProvider = 'wasm';
+        activeProvider = 'wasm';
+        updateBackendBadge();
+        session = await getSession(key, url, label);
+        return await session.run(feeds);
+      }
+    }
+  }
+
+  return result;
 }
+
 
 
 async function updateCacheStatusUI() {

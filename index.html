@@ -861,6 +861,7 @@ function updateBackendBadge() {
 
 const MODEL_CACHE = 'utilvision-models-v1';
 const DETECT_EVERY = 5;
+const HF_BASE = 'https://huggingface.co/majorpurple/utilvision-onnx/resolve/main/';
 
 let activeSessionPrecision = 'fp16';
 const sessions = {};
@@ -1191,7 +1192,7 @@ precisionToggle.addEventListener('change', async () => {
   const modelName = `stage3_${activeSessionPrecision}.onnx`;
   const label = activeSessionPrecision === 'fp16' ? 'Stage 3 Recognizer (FP16, 31 MB)' : 'Stage 3 Recognizer (FP32, 62 MB)';
   try {
-    await getSession(`s3_${activeSessionPrecision}`, `models/${modelName}`, label);
+    await getSession(`s3_${activeSessionPrecision}`, `${HF_BASE}${modelName}`, label);
   } catch(e){}
   if (currentImgSource) runPipelineOnImage(currentImgSource);
 });
@@ -1257,7 +1258,7 @@ async function runPipelineOnImage(img) {
 // Stage 2: LCD Region Detection (with Conditional Cascade TTA for photos)
 async function executeDetection(source, W, H, allowTTA = false) {
   let totalDetMs = 0;
-  const S2_KEY = 's2', S2_URL = 'models/stage2.onnx', S2_LABEL = 'Stage 2 Detector (10.6 MB)';
+  const S2_KEY = 's2', S2_URL = HF_BASE + 'stage2.onnx', S2_LABEL = 'Stage 2 Detector (10.6 MB)';
 
   async function evaluateWindow(sx, sy, sw, sh) {
     const scale = Math.min(640 / sw, 640 / sh);
@@ -1364,7 +1365,7 @@ async function executeRecognition(source, box) {
   const s3Key = `s3_${activeSessionPrecision}`;
 
   const tStart = performance.now();
-  const outputs = await safeRun(s3Key, `models/${modelName}`, label, { x: tensor });
+  const outputs = await safeRun(s3Key, `${HF_BASE}${modelName}`, label, { x: tensor });
   const recMs = performance.now() - tStart;
 
   const outKey = Object.keys(outputs)[0];
@@ -1553,8 +1554,8 @@ updateBackendBadge(); // initial: shows WASM while probe runs
   //    On WASM devices this warms the WASM JIT so first inference is instant.
   (window.requestIdleCallback || (cb => setTimeout(cb, 400)))(async () => {
     try {
-      await getSession('s2', 'models/stage2.onnx', 'Stage 2 Detector (10.6 MB)');
-      await getSession('s3_fp16', 'models/stage3_fp16.onnx', 'Stage 3 Recognizer (FP16, 31 MB)');
+      await getSession('s2', HF_BASE + 'stage2.onnx', 'Stage 2 Detector (10.6 MB)');
+      await getSession('s3_fp16', HF_BASE + 'stage3_fp16.onnx', 'Stage 3 Recognizer (FP16, 31 MB)');
     } catch (e) {
       // Prefetch failure is non-fatal; sessions will be created on first user action
       console.warn('[UtilVision] Background prefetch failed:', e.message);

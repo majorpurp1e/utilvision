@@ -3,7 +3,8 @@
 UtilVision is an edge-native, browser-based computer vision pipeline engineered to detect and parse digital utility meter LCD counters in real time directly on client hardware. Designed for automated utility meter reading (AMR) and tenant billing platforms, UtilVision executes end-to-end neural inference entirely within the client web browser session with zero server inference cost, zero cloud API dependencies, complete tenant data privacy, and full offline functionality.
 
 Production Deployment: [https://utilvision.vercel.app/](https://utilvision.vercel.app/)  
-Architecture and Benchmarks: [https://utilvision.vercel.app/about.html](https://utilvision.vercel.app/about.html)
+Architecture and Benchmarks: [https://utilvision.vercel.app/about.html](https://utilvision.vercel.app/about.html)  
+Hugging Face Model Repository: [https://huggingface.co/majorpurple/utilvision-onnx](https://huggingface.co/majorpurple/utilvision-onnx)
 
 ---
 
@@ -101,6 +102,14 @@ Inference latencies measured using the High Resolution Time API (`performance.no
     ├── img (118).jpg      # Commercial utility reference sample (Set B)
     └── img (110).jpg      # Industrial three-phase reference sample (Set C)
 ```
+
+---
+
+## Model Repository and Open-Access Weights
+
+The production ONNX model graphs are hosted on Hugging Face Hub under AGPL-3.0 copyleft terms:
+* Hugging Face Model Repository: [https://huggingface.co/majorpurple/utilvision-onnx](https://huggingface.co/majorpurple/utilvision-onnx)
+* Direct Edge Fetching: Model files are delivered directly to client browser sessions via cross-origin requests (`Access-Control-Allow-Origin: *`) and permanently stored in client `CacheStorage` for zero-bandwidth subsequent visits.
 
 ---
 

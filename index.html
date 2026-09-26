@@ -9,205 +9,755 @@
 <meta property="og:description" content="Two-stage YOLOv11n + PP-OCRv6 pipeline running client-side in WebAssembly.">
 <meta property="og:type" content="website">
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='18' fill='%2311161C'/%3E%3Ctext x='50' y='68' font-size='58' text-anchor='middle' fill='%23FFB454' font-family='monospace'%3E7%3C/text%3E%3C/svg%3E">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='18' fill='%230f172a'/%3E%3Ctext x='50' y='68' font-size='58' text-anchor='middle' fill='%2310b981' font-family='monospace'%3E7%3C/text%3E%3C/svg%3E">
 <script src="https://cdn.jsdelivr.net/npm/onnxruntime-web@1.19.2/dist/ort.min.js"></script>
 <style>
-  :root{
-    --bg:#11161C; --panel:#1A212B; --text:#E8ECF1; --muted:#8B96A5;
-    --amber:#FFB454; --green:#6EE7B7; --red:#FF6B6B; --border:#262E38;
+  :root {
+    --bg: #090d16;
+    --card: #111827;
+    --card-border: #1f2937;
+    --card-hover: #1e293b;
+    --text: #f3f4f6;
+    --muted: #94a3b8;
+    --green: #10b981;
+    --green-glow: rgba(16, 185, 129, 0.2);
+    --cyan: #06b6d4;
+    --amber: #f59e0b;
+    --red: #ef4444;
   }
-  *{box-sizing:border-box}
-  body{margin:0;background:var(--bg);color:var(--text);
-    font-family:-apple-system,'Segoe UI',Roboto,sans-serif;line-height:1.5;
-    -webkit-text-size-adjust:100%}
-  header{padding:32px 20px 12px;max-width:680px;margin:0 auto}
-  .nav{display:flex;justify-content:flex-end;margin-bottom:8px}
-  .nav a{color:var(--muted);font-size:.85rem;text-decoration:none;border-bottom:1px solid var(--border)}
-  .nav a:hover{color:var(--amber);border-color:var(--amber)}
-  h1{font-size:1.5rem;margin:0 0 6px;letter-spacing:-.01em}
-  .sub{color:var(--muted);font-size:.92rem;margin:0 0 12px;max-width:54ch}
-  .badges{display:flex;gap:8px;flex-wrap:wrap}
-  .badge{font-size:.72rem;color:var(--muted);border:1px solid var(--border);
-    border-radius:20px;padding:4px 11px}
-  main{max-width:680px;margin:0 auto;padding:4px 20px 20px}
-  .panel{background:var(--panel);border-radius:10px;padding:20px;margin-bottom:16px}
-  .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
-  button,label.btn{background:var(--amber);color:#1A140A;border:none;border-radius:8px;
-    padding:13px 18px;font-size:.95rem;font-weight:600;cursor:pointer;display:inline-block;
-    min-height:44px;touch-action:manipulation}
-  button:disabled{opacity:.5;cursor:default}
-  button.secondary{background:transparent;color:var(--text);border:1px solid var(--border)}
-  button.stop{background:var(--red);color:#1A0A0A}
-  input[type=file]{display:none}
-  .toggle{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:.85rem;margin-top:14px}
-  .toggle input{width:16px;height:16px}
-  #preview,#liveVideo{max-width:100%;width:100%;height:auto;border-radius:8px;
-    margin-top:14px;display:none;background:#000}
-  .live-badge{display:none;align-items:center;gap:6px;color:var(--red);font-size:.8rem;
-    font-weight:600;margin-top:8px}
-  .live-badge.on{display:flex}
-  .dot{width:8px;height:8px;border-radius:50%;background:var(--red);animation:pulse 1s infinite}
-  @media (prefers-reduced-motion: reduce){.dot{animation:none}}
-  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
-  .progress-wrap{margin-top:14px}
-  .progress-label{font-size:.78rem;color:var(--muted);margin-bottom:6px;display:flex;justify-content:space-between}
-  .progress-bar{height:6px;background:var(--border);border-radius:3px;overflow:hidden}
-  .progress-fill{height:100%;background:var(--amber);width:0%;transition:width .15s ease}
-  .reading-row{display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap}
-  .reading-display{font-family:'SF Mono',Consolas,monospace;font-size:2.4rem;letter-spacing:.05em;
-    color:var(--amber);text-align:center;padding:18px 0;font-variant-numeric:tabular-nums;
-    word-break:break-all}
-  .status{font-size:.85rem;color:var(--muted);text-align:center}
-  .status.ok{color:var(--green)}
-  .status.warn{color:var(--red)}
-  .meta{display:flex;justify-content:space-between;font-size:.8rem;color:var(--muted);
-    border-top:1px solid var(--border);padding-top:12px;margin-top:8px;gap:10px;flex-wrap:wrap}
-  .timing{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:14px;
-    border-top:1px solid var(--border);padding-top:14px}
-  .timing div{text-align:center}
-  .timing .val{font-family:'SF Mono',Consolas,monospace;font-size:1.05rem;color:var(--green)}
-  .timing .lbl{font-size:.68rem;color:var(--muted);margin-top:2px}
-  .crop-preview{margin-top:12px;text-align:center}
-  .crop-preview img{max-width:100%;border:1px solid var(--border);border-radius:4px;
-    image-rendering:pixelated}
-  footer{max-width:680px;margin:0 auto;padding:0 20px 40px;color:var(--muted);font-size:.8rem;line-height:1.6}
-  footer code{background:var(--panel);padding:1px 5px;border-radius:4px}
-  .small-btn{padding:8px 14px;min-height:auto;font-size:.82rem}
-  @media (max-width:460px){
-    .timing{grid-template-columns:repeat(2,1fr);row-gap:14px}
-    button,label.btn{flex:1;text-align:center}
-    h1{font-size:1.3rem}
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    line-height: 1.5;
+    min-height: 100vh;
+    padding: 24px 16px 40px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  .wrap {
+    width: 100%;
+    max-width: 760px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  /* Header */
+  header {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding-bottom: 8px;
+  }
+  .nav {
+    display: flex;
+    justify-content: flex-end;
+  }
+  .nav a {
+    color: var(--muted);
+    font-size: 0.85rem;
+    text-decoration: none;
+    padding: 4px 10px;
+    border-radius: 6px;
+    border: 1px solid var(--card-border);
+    transition: all 0.15s ease;
+  }
+  .nav a:hover {
+    color: var(--text);
+    border-color: #374151;
+    background: var(--card);
+  }
+  .brand-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  h1 {
+    font-size: 1.7rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: #fff;
+  }
+  .sub {
+    color: var(--muted);
+    font-size: 0.95rem;
+    max-width: 58ch;
+  }
+  .badges {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 2px;
+  }
+  .badge {
+    font-size: 0.75rem;
+    color: var(--muted);
+    border: 1px solid var(--card-border);
+    background: rgba(17, 24, 39, 0.7);
+    border-radius: 20px;
+    padding: 3px 10px;
+    font-weight: 500;
+  }
+  .badge.live {
+    color: var(--green);
+    border-color: rgba(16, 185, 129, 0.35);
+    background: var(--green-glow);
+  }
+
+  /* Mode Switcher Tabs */
+  .tabs {
+    display: flex;
+    background: #0d131f;
+    border: 1px solid var(--card-border);
+    border-radius: 10px;
+    padding: 4px;
+    gap: 4px;
+  }
+  .tab-btn {
+    flex: 1;
+    background: transparent;
+    border: none;
+    color: var(--muted);
+    padding: 10px;
+    font-size: 0.88rem;
+    font-weight: 600;
+    border-radius: 7px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    text-align: center;
+  }
+  .tab-btn.active {
+    background: #1e293b;
+    color: #fff;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  }
+
+  /* Card */
+  .card {
+    background: var(--card);
+    border: 1px solid var(--card-border);
+    border-radius: 12px;
+    padding: 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  /* Action Buttons Grid */
+  .action-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+  @media (max-width: 520px) {
+    .action-grid { grid-template-columns: 1fr; }
+  }
+  .btn-upload {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 16px;
+    border-radius: 10px;
+    border: 1px solid var(--card-border);
+    background: #151d2c;
+    color: var(--text);
+    cursor: pointer;
+    transition: all 0.15s ease;
+    user-select: none;
+  }
+  .btn-upload:hover {
+    background: var(--card-hover);
+    border-color: #374151;
+    transform: translateY(-1px);
+  }
+  .btn-upload.primary {
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(6, 182, 212, 0.12));
+    border-color: rgba(16, 185, 129, 0.35);
+  }
+  .btn-upload.primary:hover {
+    border-color: var(--green);
+  }
+  .icon-box {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.05);
+    flex-shrink: 0;
+  }
+  .icon-box svg {
+    width: 20px;
+    height: 20px;
+    stroke: currentColor;
+  }
+  .btn-upload.primary .icon-box svg { stroke: var(--green); }
+  .btn-text {
+    display: flex;
+    flex-direction: column;
+    text-align: left;
+  }
+  .btn-text strong {
+    font-size: 0.92rem;
+    font-weight: 600;
+  }
+  .btn-text span {
+    font-size: 0.76rem;
+    color: var(--muted);
+  }
+  input[type=file] { display: none; }
+
+  /* Dropzone */
+  .dropzone {
+    border: 2px dashed #263346;
+    border-radius: 10px;
+    padding: 16px;
+    text-align: center;
+    cursor: pointer;
+    background: rgba(13, 19, 31, 0.5);
+    transition: all 0.15s ease;
+  }
+  .dropzone:hover, .dropzone.active {
+    border-color: var(--green);
+    background: rgba(16, 185, 129, 0.04);
+  }
+  .dropzone p {
+    font-size: 0.85rem;
+    color: var(--muted);
+  }
+
+  /* Preset Pills */
+  .presets-section {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding-top: 4px;
+  }
+  .section-label {
+    font-size: 0.74rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--muted);
+  }
+  .preset-row {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+  .preset-chip {
+    background: #151d2c;
+    border: 1px solid var(--card-border);
+    color: var(--text);
+    padding: 6px 12px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+  .preset-chip:hover {
+    background: var(--card-hover);
+    border-color: #3b4d66;
+    color: #fff;
+  }
+
+  /* Live Camera UI */
+  #camera-panel {
+    display: none;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .camera-view {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 4/3;
+    max-height: 420px;
+    background: #000;
+    border-radius: 10px;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  .camera-bar {
+    display: flex;
+    gap: 8px;
+  }
+  .btn-action {
+    background: #1e293b;
+    border: 1px solid var(--card-border);
+    color: var(--text);
+    padding: 10px 16px;
+    font-size: 0.88rem;
+    font-weight: 600;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    flex: 1;
+    text-align: center;
+  }
+  .btn-action:hover { background: #273549; }
+  .btn-action.stop { background: var(--red); color: #fff; border-color: var(--red); }
+
+  /* Progress UI */
+  .progress-wrap {
+    margin-top: 4px;
+    background: #0b111c;
+    border: 1px solid var(--card-border);
+    border-radius: 8px;
+    padding: 10px 14px;
+  }
+  .progress-label {
+    font-size: 0.78rem;
+    color: var(--muted);
+    margin-bottom: 6px;
+    display: flex;
+    justify-content: space-between;
+  }
+  .progress-bar {
+    height: 6px;
+    background: #1e293b;
+    border-radius: 3px;
+    overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%;
+    background: var(--green);
+    width: 0%;
+    transition: width 0.15s ease;
+  }
+
+  /* Results Card */
+  .result-card {
+    background: var(--card);
+    border: 1px solid var(--card-border);
+    border-radius: 12px;
+    padding: 18px;
+    display: none;
+    flex-direction: column;
+    gap: 14px;
+  }
+  .preview-container {
+    width: 100%;
+    height: 220px;
+    background: #000;
+    border-radius: 8px;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--card-border);
+  }
+  .preview-container canvas {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+  }
+  .crop-strip {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: #0b111c;
+    padding: 8px 12px;
+    border-radius: 8px;
+    border: 1px solid var(--card-border);
+  }
+  .crop-strip img, .crop-strip canvas {
+    height: 38px;
+    border-radius: 4px;
+    border: 1px solid #2d3b4e;
+    background: #000;
+  }
+  .crop-strip-info {
+    font-size: 0.78rem;
+    color: var(--muted);
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  /* Digital Counter Display */
+  .counter-box {
+    background: #070b12;
+    border: 2px solid #1e293b;
+    border-radius: 10px;
+    padding: 14px 16px;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    position: relative;
+    box-shadow: inset 0 0 16px rgba(0, 0, 0, 0.8), 0 0 16px var(--green-glow);
+  }
+  .counter-unit {
+    font-size: 0.72rem;
+    color: var(--muted);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    font-weight: 600;
+  }
+  .counter-digits {
+    font-family: 'SF Mono', Consolas, 'Liberation Mono', Menlo, monospace;
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: var(--green);
+    letter-spacing: 0.06em;
+    font-variant-numeric: tabular-nums;
+  }
+  .btn-copy {
+    position: absolute;
+    right: 12px;
+    top: 14px;
+    background: #1e293b;
+    border: 1px solid #334155;
+    color: var(--muted);
+    padding: 4px 10px;
+    font-size: 0.75rem;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.15s ease;
+  }
+  .btn-copy:hover {
+    color: #fff;
+    background: #273549;
+  }
+  .status-text {
+    font-size: 0.82rem;
+    color: var(--muted);
+  }
+  .status-text.ok { color: var(--green); }
+  .status-text.warn { color: var(--amber); }
+
+  /* Timings Grid */
+  .timing-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    border-top: 1px solid var(--card-border);
+    padding-top: 12px;
+  }
+  @media (max-width: 480px) {
+    .timing-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+  }
+  .timing-item {
+    text-align: center;
+  }
+  .timing-val {
+    font-family: 'SF Mono', Consolas, monospace;
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: var(--cyan);
+  }
+  .timing-item.total .timing-val {
+    color: var(--green);
+  }
+  .timing-lbl {
+    font-size: 0.7rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin-top: 2px;
+  }
+
+  /* Utility Options */
+  .utility-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.8rem;
+    color: var(--muted);
+    flex-wrap: wrap;
+    gap: 10px;
+    padding: 0 4px;
+  }
+  .toggle-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    user-select: none;
+  }
+  .toggle-label input { width: 15px; height: 15px; cursor: pointer; }
+  .btn-clean {
+    background: transparent;
+    border: 1px solid var(--card-border);
+    color: var(--muted);
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 0.76rem;
+    cursor: pointer;
+  }
+  .btn-clean:hover { color: var(--text); border-color: #374151; }
+
+  footer {
+    text-align: center;
+    font-size: 0.78rem;
+    color: #64748b;
+    padding: 10px 0 20px;
   }
 </style>
 </head>
 <body>
-<header>
-  <div class="nav"><a href="about.html">Architecture and Benchmarks →</a></div>
-  <h1>UtilVision</h1>
-  <p class="sub">Fast on-device electric meter reader. Scan or upload a photo to parse the LCD reading directly in your browser with zero cloud calls.</p>
-  <div class="badges">
-    <span class="badge" id="backendBadge">Engine: Loading...</span>
-    <span class="badge">100% On-Device</span>
-    <span class="badge">Private and Offline</span>
-  </div>
-</header>
-<main>
-  <div class="panel">
-    <div class="row">
-      <label class="btn" for="fileInput">Choose Photo</label>
-      <input type="file" id="fileInput" accept="image/*" capture="environment">
-      <button id="runBtn" class="secondary" disabled>Read Meter</button>
-      <button id="liveBtn">Live Camera</button>
+
+<div class="wrap">
+
+  <!-- Header -->
+  <header>
+    <div class="nav">
+      <a href="about.html">Architecture &amp; Benchmarks →</a>
     </div>
-    <div class="row" id="liveControls" style="display:none;margin-top:10px">
-      <button id="freezeBtn" class="secondary small-btn">Pause</button>
-      <button id="flipBtn" class="secondary small-btn">Switch Camera</button>
+    <div class="brand-row">
+      <div>
+        <h1>UtilVision</h1>
+        <p class="sub">Fast on-device electric meter reader. Scan or upload an image to parse LCD readings locally with zero cloud calls.</p>
+      </div>
     </div>
-    <div class="toggle">
-      <input type="checkbox" id="precisionToggle">
-      <label for="precisionToggle">High-precision FP32 mode (+62 MB download)</label>
+    <div class="badges">
+      <span class="badge live" id="backendBadge">Engine: Initializing...</span>
+      <span class="badge">100% On-Device</span>
+      <span class="badge">Private &amp; Offline</span>
     </div>
-    <div class="row" style="margin-top:14px;justify-content:space-between">
-      <span id="cacheStatus" style="font-size:.8rem;color:var(--muted)">Checking local cache...</span>
-      <button id="clearCacheBtn" class="secondary small-btn">Clear Cache</button>
-    </div>
-    <div class="progress-wrap" id="progressWrap" style="display:none">
-      <div class="progress-label"><span id="progressLabel">Loading model...</span><span id="progressPct">0%</span></div>
-      <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
-    </div>
-    <img id="preview" alt="Selected meter photo">
-    <video id="liveVideo" playsinline muted autoplay></video>
-    <div class="live-badge" id="liveBadge"><span class="dot"></span>LIVE DECODING</div>
+  </header>
+
+  <!-- Mode Switcher Tabs -->
+  <div class="tabs">
+    <button class="tab-btn active" id="tabUploadBtn" onclick="switchMode('upload')">Photo &amp; Presets</button>
+    <button class="tab-btn" id="tabCameraBtn" onclick="switchMode('camera')">Live Camera Stream</button>
   </div>
 
-  <div class="panel" id="resultPanel" style="display:none">
-    <div class="reading-row">
-      <div class="reading-display" id="readingText" role="status" aria-live="polite">--</div>
-      <button id="copyBtn" class="secondary small-btn" aria-label="Copy reading to clipboard">Copy</button>
+  <!-- UPLOAD / PRESET PANEL -->
+  <div class="card" id="upload-panel">
+    
+    <!-- Action Buttons: Explicit Camera vs Gallery -->
+    <div class="action-grid">
+      <label class="btn-upload primary" for="cameraInput">
+        <div class="icon-box">
+          <svg fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><circle cx="12" cy="13" r="3" stroke-width="2"/></svg>
+        </div>
+        <div class="btn-text">
+          <strong>Snap Photo</strong>
+          <span>Open camera directly</span>
+        </div>
+        <input type="file" id="cameraInput" accept="image/*" capture="environment">
+      </label>
+
+      <label class="btn-upload" for="galleryInput">
+        <div class="icon-box">
+          <svg fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+        </div>
+        <div class="btn-text">
+          <strong>Choose from Gallery</strong>
+          <span>Select saved photo or files</span>
+        </div>
+        <input type="file" id="galleryInput" accept="image/*">
+      </label>
     </div>
-    <div class="status" id="statusText" role="status" aria-live="polite"></div>
-    <div class="meta">
-      <span id="detConf"></span>
-      <span id="ocrConf"></span>
+
+    <!-- Desktop Drag and Drop -->
+    <label class="dropzone" id="dropArea" for="galleryInput">
+      <p>Or drag and drop a meter photo here (JPG, PNG, WebP)</p>
+    </label>
+
+    <!-- Quick Test Presets -->
+    <div class="presets-section">
+      <div class="section-label">Quick Test Samples (1-Click Test):</div>
+      <div class="preset-row">
+        <button class="preset-chip" onclick="loadPreset('./samples/img (103).jpg')">Domestic LCD</button>
+        <button class="preset-chip" onclick="loadPreset('./samples/img (104).jpg')">Capital 1-Phase</button>
+        <button class="preset-chip" onclick="loadPreset('./samples/img (118).jpg')">Sprint 360</button>
+        <button class="preset-chip" onclick="loadPreset('./samples/img (141).jpg')">Industrial 3-Phase</button>
+        <button class="preset-chip" onclick="loadPreset('./samples/img (152).jpg')">Night Flash</button>
+        <button class="preset-chip" onclick="loadPreset('./samples/img (160).jpg')">Weathered Counter</button>
+      </div>
     </div>
-    <div class="timing" id="timingRow">
-      <div><div class="val" id="tDet">--</div><div class="lbl">Detect (ms)</div></div>
-      <div><div class="val" id="tRec">--</div><div class="lbl">OCR (ms)</div></div>
-      <div><div class="val" id="tTotal">--</div><div class="lbl">Total (ms)</div></div>
-      <div><div class="val" id="tFps">--</div><div class="lbl">FPS</div></div>
+
+    <!-- Progress UI -->
+    <div class="progress-wrap" id="progressWrap" style="display:none">
+      <div class="progress-label">
+        <span id="progressLabel">Loading model...</span>
+        <span id="progressPct">0%</span>
+      </div>
+      <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
     </div>
-    <div class="crop-preview" id="cropPreview"></div>
+
+    <!-- Options Bar -->
+    <div class="utility-bar">
+      <label class="toggle-label" for="precisionToggle">
+        <input type="checkbox" id="precisionToggle">
+        <span>High-precision FP32 mode (+62 MB download)</span>
+      </label>
+      <div style="display: flex; gap: 8px; align-items: center;">
+        <span id="cacheStatus" style="font-size: 0.74rem;">Checking cache...</span>
+        <button class="btn-clean" id="clearCacheBtn">Clear Cache</button>
+      </div>
+    </div>
+
   </div>
-</main>
+
+  <!-- LIVE CAMERA PANEL -->
+  <div class="card" id="camera-panel">
+    <div class="camera-view">
+      <video id="liveVideo" playsinline muted autoplay></video>
+    </div>
+    <div class="camera-bar">
+      <button class="btn-action" id="btnToggleCam" onclick="toggleCamera()">Start Back Camera</button>
+      <button class="btn-action" id="btnPauseCam" onclick="togglePauseCamera()" style="display:none;">Pause</button>
+      <button class="btn-action" id="btnFlipCam" onclick="flipCamera()" style="display:none;">Flip Camera</button>
+    </div>
+  </div>
+
+  <!-- RESULTS PANEL -->
+  <div class="result-card" id="resultCard">
+    
+    <!-- Canvas Preview with Drawn Bounding Box -->
+    <div class="preview-container">
+      <canvas id="previewCanvas"></canvas>
+    </div>
+
+    <!-- Extracted LCD Crop Strip -->
+    <div class="crop-strip">
+      <canvas id="cropCanvas" height="38" width="120"></canvas>
+      <div class="crop-strip-info">
+        <div><strong>Display Crop:</strong> <span id="cropCoords">Normalized to 96px</span></div>
+        <div>Detection Confidence: <span id="detConfText">--</span></div>
+      </div>
+    </div>
+
+    <!-- Digital Counter Readout -->
+    <div class="counter-box">
+      <button class="btn-copy" id="copyBtn" onclick="copyReading()">Copy</button>
+      <div class="counter-unit">Detected Electricity Reading (kWh)</div>
+      <div class="counter-digits" id="readingValue">--</div>
+      <div class="status-text" id="statusMessage">Processing complete</div>
+    </div>
+
+    <!-- Latency Breakdown -->
+    <div class="timing-grid">
+      <div class="timing-item">
+        <div class="timing-val" id="latDet">-- ms</div>
+        <div class="timing-lbl">Detect (YOLO)</div>
+      </div>
+      <div class="timing-item">
+        <div class="timing-val" id="latRec">-- ms</div>
+        <div class="timing-lbl">OCR (PP-OCRv6)</div>
+      </div>
+      <div class="timing-item total">
+        <div class="timing-val" id="latTotal">-- ms</div>
+        <div class="timing-lbl">Total Time</div>
+      </div>
+      <div class="timing-item">
+        <div class="timing-val" id="latFps">--</div>
+        <div class="timing-lbl">Throughput</div>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+
 <footer>
-  Inference runs locally on your machine with ONNX Runtime WebAssembly. Photos and meter readings never leave your browser.
+  Inference runs locally on your machine with ONNX Runtime WebAssembly. Photos and readings never leave your browser.
 </footer>
 
 <script>
-ort.env.wasm.numThreads = (typeof self !== 'undefined' && self.crossOriginIsolated)
+// Runtime threading configuration
+const numHardwareThreads = (typeof self !== 'undefined' && self.crossOriginIsolated)
   ? (navigator.hardwareConcurrency || 4) : 1;
+ort.env.wasm.numThreads = numHardwareThreads;
 ort.env.wasm.proxy = false;
 ort.env.wasm.wasmPaths = 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.19.2/dist/';
 
-const fileInput = document.getElementById('fileInput');
-const preview = document.getElementById('preview');
-const runBtn = document.getElementById('runBtn');
-const liveBtn = document.getElementById('liveBtn');
-const liveVideo = document.getElementById('liveVideo');
-const liveBadge = document.getElementById('liveBadge');
-const liveControls = document.getElementById('liveControls');
-const freezeBtn = document.getElementById('freezeBtn');
-const flipBtn = document.getElementById('flipBtn');
-const copyBtn = document.getElementById('copyBtn');
-const resultPanel = document.getElementById('resultPanel');
-const readingText = document.getElementById('readingText');
-const statusText = document.getElementById('statusText');
-const detConfEl = document.getElementById('detConf');
-const ocrConfEl = document.getElementById('ocrConf');
-const cropPreview = document.getElementById('cropPreview');
-const precisionToggle = document.getElementById('precisionToggle');
-const tDet = document.getElementById('tDet');
-const tRec = document.getElementById('tRec');
-const tTotal = document.getElementById('tTotal');
-const tFps = document.getElementById('tFps');
+const MODEL_CACHE = 'utilvision-models-v1';
+const DETECT_EVERY = 5;
+
+let activeSessionPrecision = 'fp16';
+const sessions = {};
+let currentImgSource = null;
+let liveStream = null;
+let isLiveActive = false;
+let isLivePaused = false;
+let liveGen = 0;
+let cameraFacing = 'environment';
+let lastDetectedBox = null;
+let lastDetConfidence = 0;
+let liveFrameCount = 0;
+
+const previewCanvas = document.getElementById('previewCanvas');
+const previewCtx = previewCanvas.getContext('2d');
+const cropCanvas = document.getElementById('cropCanvas');
+const cropCtx = cropCanvas.getContext('2d');
+
+const s2Offscreen = document.createElement('canvas');
+s2Offscreen.width = 640; s2Offscreen.height = 640;
+const s2OffCtx = s2Offscreen.getContext('2d', { willReadFrequently: true });
+
+const s3Offscreen = document.createElement('canvas');
+const s3OffCtx = s3Offscreen.getContext('2d', { willReadFrequently: true });
+
+// UI element references
+const backendBadge = document.getElementById('backendBadge');
 const progressWrap = document.getElementById('progressWrap');
 const progressLabel = document.getElementById('progressLabel');
 const progressPct = document.getElementById('progressPct');
 const progressFill = document.getElementById('progressFill');
 const cacheStatusEl = document.getElementById('cacheStatus');
-const clearCacheBtn = document.getElementById('clearCacheBtn');
-const backendBadge = document.getElementById('backendBadge');
-const MODEL_CACHE = 'utilvision-models-v1';
-const DETECT_EVERY = 5;
+const precisionToggle = document.getElementById('precisionToggle');
+const resultCard = document.getElementById('resultCard');
+const readingValue = document.getElementById('readingValue');
+const statusMessage = document.getElementById('statusMessage');
+const detConfText = document.getElementById('detConfText');
+const latDet = document.getElementById('latDet');
+const latRec = document.getElementById('latRec');
+const latTotal = document.getElementById('latTotal');
+const latFps = document.getElementById('latFps');
 
-let currentImg = null;
-let liveActive = false;
-let liveStream = null;
-let liveFrozen = false;
-let liveGen = 0;
-let facingMode = 'environment';
-let lastBox = null;
-let lastDetConf = 0;
-let frameIdx = 0;
-let backendKnown = false;
-const sessions = {};
+function switchMode(mode) {
+  const btnUpload = document.getElementById('tabUploadBtn');
+  const btnCam = document.getElementById('tabCameraBtn');
+  const panelUpload = document.getElementById('upload-panel');
+  const panelCam = document.getElementById('camera-panel');
 
-const sleep = ms => new Promise(r => setTimeout(r, ms));
+  if (mode === 'upload') {
+    btnUpload.classList.add('active');
+    btnCam.classList.remove('active');
+    panelUpload.style.display = 'flex';
+    panelCam.style.display = 'none';
+    stopCamera();
+  } else {
+    btnCam.classList.add('active');
+    btnUpload.classList.remove('active');
+    panelUpload.style.display = 'none';
+    panelCam.style.display = 'flex';
+  }
+}
 
-async function openModelCache() {
+async function openCache() {
   try { return ('caches' in window) ? await caches.open(MODEL_CACHE) : null; }
   catch (e) { return null; }
 }
 
-async function fetchWithProgress(url, label) {
-  const cache = await openModelCache();
+async function fetchModelWithProgress(url, label) {
+  const cache = await openCache();
   if (cache) {
     const cached = await cache.match(url);
     if (cached) return await cached.arrayBuffer();
   }
   const res = await fetch(url);
-  if (!res.ok) throw new Error(`Failed to fetch ${url} (${res.status})`);
-  if (cache) { try { await cache.put(url, res.clone()); } catch (e) {} }
+  if (!res.ok) throw new Error(`HTTP ${res.status} fetching ${url}`);
+  if (cache) { try { await cache.put(url, res.clone()); } catch(e){} }
   const total = parseInt(res.headers.get('content-length') || '0', 10);
   const reader = res.body.getReader();
   const chunks = [];
@@ -222,335 +772,237 @@ async function fetchWithProgress(url, label) {
     if (total) {
       const pct = Math.round((received / total) * 100);
       progressFill.style.width = pct + '%';
-      progressPct.textContent = pct + '% (' + (received / 1e6).toFixed(1) + 'MB)';
+      progressPct.textContent = `${pct}% (${(received / 1e6).toFixed(1)} MB)`;
     } else {
-      progressPct.textContent = (received / 1e6).toFixed(1) + 'MB';
+      progressPct.textContent = `${(received / 1e6).toFixed(1)} MB`;
     }
   }
   const buf = new Uint8Array(received);
   let offset = 0;
   for (const c of chunks) { buf.set(c, offset); offset += c.length; }
-  updateCacheStatus();
+  updateCacheStatusUI();
   return buf.buffer;
 }
 
 async function getSession(key, url, label) {
   if (!sessions[key]) {
-    const buffer = await fetchWithProgress(url, label);
-    progressLabel.textContent = 'Compiling ' + label + '...';
-    let session = null, backend = null;
-    if (!backendKnown && 'gpu' in navigator) {
-      try {
-        session = await ort.InferenceSession.create(buffer, { executionProviders: ['webgpu'] });
-        backend = 'WebGPU';
-      } catch (e) { session = null; }
-    }
-    if (!session) {
-      session = await ort.InferenceSession.create(buffer, { executionProviders: ['wasm'] });
-      if (!backend) {
-        const threads = (typeof self !== 'undefined' && self.crossOriginIsolated)
-          ? (navigator.hardwareConcurrency || 4) : 1;
-        backend = `WASM (${threads} threads)`;
-      }
-    }
-    if (!backendKnown) {
-      backendKnown = true;
-      backendBadge.textContent = 'Engine: ' + backend;
-      if (typeof self !== 'undefined' && self.crossOriginIsolated) {
-        backendBadge.style.color = 'var(--green)';
-        backendBadge.style.borderColor = 'var(--green)';
-      }
-    }
-    sessions[key] = session;
+    const buffer = await fetchModelWithProgress(url, label);
+    progressLabel.textContent = `Compiling ${label}...`;
+    sessions[key] = await ort.InferenceSession.create(buffer, { executionProviders: ['wasm'] });
     progressWrap.style.display = 'none';
   }
   return sessions[key];
 }
 
-async function updateCacheStatus() {
-  const cache = await openModelCache();
-  if (!cache) { cacheStatusEl.textContent = 'Local caching unavailable.'; return; }
+async function updateCacheStatusUI() {
+  const cache = await openCache();
+  if (!cache) { cacheStatusEl.textContent = 'Local cache unavailable'; return; }
   const keys = await cache.keys();
-  if (keys.length === 0) { cacheStatusEl.textContent = 'No models cached yet.'; return; }
+  if (keys.length === 0) { cacheStatusEl.textContent = 'No models cached yet'; return; }
   let totalBytes = 0;
   for (const req of keys) {
     const res = await cache.match(req);
     const len = res && res.headers.get('content-length');
     if (len) totalBytes += parseInt(len, 10);
   }
-  cacheStatusEl.textContent = `${keys.length} model file${keys.length > 1 ? 's' : ''} cached (${(totalBytes / 1e6).toFixed(1)} MB)`;
+  cacheStatusEl.textContent = `${keys.length} models cached (${(totalBytes / 1e6).toFixed(1)} MB)`;
 }
 
-clearCacheBtn.addEventListener('click', async () => {
-  clearCacheBtn.disabled = true;
+document.getElementById('clearCacheBtn').addEventListener('click', async () => {
   try {
     if ('caches' in window) await caches.delete(MODEL_CACHE);
     for (const k in sessions) delete sessions[k];
-    backendKnown = false;
-    backendBadge.textContent = 'Engine: Ready';
-    await updateCacheStatus();
-  } catch (e) { cacheStatusEl.textContent = 'Could not clear cache: ' + e.message; }
-  clearCacheBtn.disabled = false;
+    await updateCacheStatusUI();
+  } catch (e) {
+    cacheStatusEl.textContent = 'Cache clear failed';
+  }
 });
 
-function prefetchModels() {
-  const idle = window.requestIdleCallback || (cb => setTimeout(cb, 300));
-  idle(async () => {
-    try {
-      await getSession('s2', 'models/stage2.onnx', 'Detector model (10.6 MB)');
-      await getSession('s3_fp16', 'models/stage3_fp16.onnx', 'OCR model (31 MB)');
-    } catch (e) { console.warn('Prefetch skipped:', e); }
-  });
-}
+// File inputs handlers
+document.getElementById('cameraInput').addEventListener('change', e => handleFileInput(e.target.files[0]));
+document.getElementById('galleryInput').addEventListener('change', e => handleFileInput(e.target.files[0]));
 
-fileInput.addEventListener('change', () => {
-  if (liveActive) stopLive();
-  const file = fileInput.files[0];
+// Drag and drop setup
+const dropArea = document.getElementById('dropArea');
+dropArea.addEventListener('dragover', e => { e.preventDefault(); dropArea.classList.add('active'); });
+dropArea.addEventListener('dragleave', () => dropArea.classList.remove('active'));
+dropArea.addEventListener('drop', e => {
+  e.preventDefault();
+  dropArea.classList.remove('active');
+  if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+    handleFileInput(e.dataTransfer.files[0]);
+  }
+});
+
+function handleFileInput(file) {
   if (!file) return;
-  const img = new Image();
-  img.onload = () => {
-    currentImg = img;
-    preview.src = img.src;
-    preview.style.display = 'block';
-    runBtn.disabled = false;
-    resultPanel.style.display = 'none';
+  const reader = new FileReader();
+  reader.onload = () => {
+    const img = new Image();
+    img.onload = () => runPipelineOnImage(img);
+    img.src = reader.result;
   };
-  img.src = URL.createObjectURL(file);
+  reader.readAsDataURL(file);
+}
+
+function loadPreset(sampleUrl) {
+  const img = new Image();
+  img.crossOrigin = 'anonymous';
+  img.onload = () => runPipelineOnImage(img);
+  img.src = sampleUrl;
+}
+
+precisionToggle.addEventListener('change', () => {
+  activeSessionPrecision = precisionToggle.checked ? 'fp32' : 'fp16';
+  if (currentImgSource) runPipelineOnImage(currentImgSource);
 });
 
-runBtn.addEventListener('click', async () => {
-  if (!currentImg) return;
-  runBtn.disabled = true;
-  runBtn.textContent = 'Reading...';
-  resultPanel.style.display = 'block';
+async function runPipelineOnImage(img) {
+  currentImgSource = img;
+  resultCard.style.display = 'flex';
+  readingValue.textContent = 'Processing...';
+  statusMessage.textContent = 'Analyzing image...';
+  statusMessage.className = 'status-text';
+
+  const W = img.naturalWidth || img.width;
+  const H = img.naturalHeight || img.height;
+  const t0 = performance.now();
+
   try {
-    const W = currentImg.naturalWidth, H = currentImg.naturalHeight;
-    const t0 = performance.now();
-    const det = await runDetection(currentImg, W, H, () => false);
+    const det = await executeDetection(img, W, H);
     if (det.error) {
-      updateResultUI({ error: det.error, detMs: det.detMs, totalMs: performance.now() - t0 });
+      drawPreview(img, null);
+      readingValue.textContent = '--';
+      statusMessage.textContent = det.error;
+      statusMessage.className = 'status-text warn';
+      latDet.textContent = `${det.detMs.toFixed(1)} ms`;
+      latRec.textContent = '--';
+      latTotal.textContent = `${(performance.now() - t0).toFixed(1)} ms`;
+      latFps.textContent = '--';
+      return;
+    }
+
+    drawPreview(img, det.box);
+    const rec = await executeRecognition(img, det.box);
+    const totalMs = performance.now() - t0;
+
+    readingValue.textContent = rec.reading || '(no digits detected)';
+    detConfText.textContent = `${(det.detConf * 100).toFixed(1)}%`;
+    if (rec.ocrConf < 0.60) {
+      statusMessage.textContent = 'Low confidence. Please double-check reading.';
+      statusMessage.className = 'status-text warn';
     } else {
-      const rec = await runRecognition(currentImg, det.box, () => false);
-      updateResultUI({
-        reading: rec.reading, detConf: det.detConf, ocrConf: rec.ocrConf, crop: rec.crop,
-        detMs: det.detMs, recMs: rec.recMs, totalMs: performance.now() - t0
-      });
+      statusMessage.textContent = 'Reading verified.';
+      statusMessage.className = 'status-text ok';
     }
+
+    latDet.textContent = `${det.detMs.toFixed(1)} ms`;
+    latRec.textContent = `${rec.recMs.toFixed(1)} ms`;
+    latTotal.textContent = `${totalMs.toFixed(1)} ms`;
+    latFps.textContent = (1000 / totalMs).toFixed(1);
+
   } catch (err) {
-    updateResultUI({ error: 'Error: ' + err.message });
     console.error(err);
-  }
-  runBtn.disabled = false;
-  runBtn.textContent = 'Read Meter';
-});
-
-liveBtn.addEventListener('click', () => { liveActive ? stopLive() : startLive(); });
-
-freezeBtn.addEventListener('click', () => {
-  liveFrozen = !liveFrozen;
-  freezeBtn.textContent = liveFrozen ? 'Resume' : 'Pause';
-});
-
-flipBtn.addEventListener('click', async () => {
-  facingMode = facingMode === 'environment' ? 'user' : 'environment';
-  liveGen++;
-  lastBox = null;
-  if (liveStream) liveStream.getTracks().forEach(t => t.stop());
-  try {
-    liveStream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode, width: { ideal: 1280 }, height: { ideal: 720 } }
-    });
-    liveVideo.srcObject = liveStream;
-  } catch (e) { alert('Could not switch camera: ' + e.message); }
-});
-
-copyBtn.addEventListener('click', async () => {
-  const val = readingText.textContent;
-  if (!val || val === '--' || val === '—') return;
-  try { await navigator.clipboard.writeText(val); }
-  catch (e) {
-    const ta = document.createElement('textarea');
-    ta.value = val; document.body.appendChild(ta); ta.select();
-    document.execCommand('copy'); document.body.removeChild(ta);
-  }
-  const orig = copyBtn.textContent;
-  copyBtn.textContent = 'Copied!';
-  setTimeout(() => { copyBtn.textContent = orig; }, 1200);
-});
-
-async function startLive() {
-  try {
-    liveStream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode, width: { ideal: 1280 }, height: { ideal: 720 } }
-    });
-  } catch (err) { alert('Camera access failed: ' + err.message); return; }
-  preview.style.display = 'none';
-  liveVideo.srcObject = liveStream;
-  liveVideo.style.display = 'block';
-  liveBadge.classList.add('on');
-  liveControls.style.display = 'flex';
-  liveBtn.textContent = 'Stop Camera';
-  liveBtn.classList.add('stop');
-  runBtn.disabled = true;
-  resultPanel.style.display = 'block';
-  liveActive = true;
-  liveFrozen = false;
-  lastBox = null;
-  frameIdx = 0;
-  liveGen++;
-  liveLoop();
-}
-
-function stopLive() {
-  liveActive = false;
-  liveGen++;
-  if (liveStream) { liveStream.getTracks().forEach(t => t.stop()); liveStream = null; }
-  liveVideo.style.display = 'none';
-  liveBadge.classList.remove('on');
-  liveControls.style.display = 'none';
-  liveBtn.textContent = 'Live Camera';
-  liveBtn.classList.remove('stop');
-  runBtn.disabled = !currentImg;
-}
-
-async function liveLoop() {
-  while (liveActive) {
-    if (liveFrozen) { await sleep(80); continue; }
-    if (liveVideo.videoWidth > 0) {
-      const gen = liveGen;
-      const isStale = () => gen !== liveGen;
-      const W = liveVideo.videoWidth, H = liveVideo.videoHeight;
-      const t0 = performance.now();
-      try {
-        let det = null;
-        const needDetect = !lastBox || (frameIdx % DETECT_EVERY === 0);
-        if (needDetect) {
-          det = await runDetection(liveVideo, W, H, isStale);
-          if (isStale()) { frameIdx++; continue; }
-          if (det.error) {
-            lastBox = null;
-            updateResultUI({ error: det.error });
-            frameIdx++; await sleep(20); continue;
-          }
-          lastBox = det.box; lastDetConf = det.detConf;
-        }
-        const rec = await runRecognition(liveVideo, lastBox, isStale);
-        if (!isStale()) {
-          updateResultUI({
-            reading: rec.reading, detConf: lastDetConf, ocrConf: rec.ocrConf, crop: rec.crop,
-            detMs: det ? det.detMs : 0, recMs: rec.recMs, totalMs: performance.now() - t0
-          });
-        }
-      } catch (err) { console.error(err); }
-      frameIdx++;
-    }
-    await sleep(20);
+    readingValue.textContent = '--';
+    statusMessage.textContent = 'Inference error: ' + err.message;
+    statusMessage.className = 'status-text warn';
   }
 }
 
-function updateResultUI(result) {
-  if (result.error) {
-    readingText.textContent = '--';
-    statusText.textContent = result.error;
-    statusText.className = 'status warn';
-    tDet.textContent = tRec.textContent = tTotal.textContent = tFps.textContent = '--';
-    cropPreview.innerHTML = '';
-    return;
-  }
-  readingText.textContent = result.reading || '(no digits read)';
-  detConfEl.textContent = `Detection: ${(result.detConf * 100).toFixed(1)}%`;
-  ocrConfEl.textContent = `OCR: ${(result.ocrConf * 100).toFixed(1)}%`;
-  if (result.ocrConf < 0.60) {
-    statusText.textContent = 'Low confidence. Please double-check reading.';
-    statusText.className = 'status warn';
-  } else {
-    statusText.textContent = 'Reading verified.';
-    statusText.className = 'status ok';
-  }
-  tDet.textContent = result.detMs.toFixed(1);
-  tRec.textContent = result.recMs.toFixed(1);
-  tTotal.textContent = result.totalMs.toFixed(1);
-  tFps.textContent = (1000 / result.totalMs).toFixed(1);
-  if (result.crop) cropPreview.innerHTML = `<img src="${result.crop}" alt="Detected LCD crop">`;
-}
-
-// Stage 2: letterbox + detect + un-letterbox to a box in source image coordinates
-async function runDetection(source, W, H, isStale) {
+// Stage 2: YOLO Detection
+async function executeDetection(source, W, H) {
   const scale = Math.min(640 / W, 640 / H);
   const nw = Math.round(W * scale), nh = Math.round(H * scale);
   const padX = Math.floor((640 - nw) / 2), padY = Math.floor((640 - nh) / 2);
-  const c2 = document.createElement('canvas');
-  c2.width = 640; c2.height = 640;
-  const ctx2 = c2.getContext('2d');
-  ctx2.fillStyle = '#727272';
-  ctx2.fillRect(0, 0, 640, 640);
-  ctx2.drawImage(source, padX, padY, nw, nh);
-  const id2 = ctx2.getImageData(0, 0, 640, 640).data;
-  const f2 = new Float32Array(3 * 640 * 640);
+
+  s2OffCtx.fillStyle = '#727272';
+  s2OffCtx.fillRect(0, 0, 640, 640);
+  s2OffCtx.drawImage(source, padX, padY, nw, nh);
+
+  const imgData = s2OffCtx.getImageData(0, 0, 640, 640).data;
+  const f32 = new Float32Array(3 * 640 * 640);
   const rO = 0, gO = 640 * 640, bO = 2 * 640 * 640;
   for (let i = 0, p = 0; i < 640 * 640; i++, p += 4) {
-    f2[rO + i] = id2[p] / 255.0;
-    f2[gO + i] = id2[p + 1] / 255.0;
-    f2[bO + i] = id2[p + 2] / 255.0;
+    f32[rO + i] = imgData[p] / 255.0;
+    f32[gO + i] = imgData[p + 1] / 255.0;
+    f32[bO + i] = imgData[p + 2] / 255.0;
   }
-  const s2Tensor = new ort.Tensor('float32', f2, [1, 3, 640, 640]);
-  const s2sess = await getSession('s2', 'models/stage2.onnx', 'Detector model (10.6 MB)');
-  if (isStale()) return { error: 'cancelled', detMs: 0 };
-  const tDetStart = performance.now();
-  const s2out = await s2sess.run({ images: s2Tensor });
-  const detMs = performance.now() - tDetStart;
-  const outData = s2out.output0.data;
 
+  const tensor = new ort.Tensor('float32', f32, [1, 3, 640, 640]);
+  const session = await getSession('s2', 'models/stage2.onnx', 'Detector model (10.6 MB)');
+
+  const tStart = performance.now();
+  const outputs = await session.run({ images: tensor });
+  const detMs = performance.now() - tStart;
+
+  const outData = outputs.output0.data;
   let maxConf = -1, bestIdx = -1;
   for (let i = 0; i < 8400; i++) {
     const conf = outData[4 * 8400 + i];
     if (conf > maxConf) { maxConf = conf; bestIdx = i; }
   }
+
   if (maxConf < 0.25) return { error: 'No meter display found in frame.', detMs };
+
   const cx = outData[0 * 8400 + bestIdx];
   const cy = outData[1 * 8400 + bestIdx];
   const bw = outData[2 * 8400 + bestIdx];
   const bh = outData[3 * 8400 + bestIdx];
-  let bx1 = Math.max(0, Math.min(W - 1, Math.round((cx - bw / 2 - padX) / scale)));
-  let by1 = Math.max(0, Math.min(H - 1, Math.round((cy - bh / 2 - padY) / scale)));
-  let bx2 = Math.max(bx1 + 1, Math.min(W, Math.round((cx + bw / 2 - padX) / scale)));
-  let by2 = Math.max(by1 + 1, Math.min(H, Math.round((cy + bh / 2 - padY) / scale)));
-  return { box: { bx1, by1, cropW: bx2 - bx1, cropH: by2 - by1 }, detConf: maxConf, detMs };
+
+  const bx1 = Math.max(0, Math.min(W - 1, Math.round((cx - bw / 2 - padX) / scale)));
+  const by1 = Math.max(0, Math.min(H - 1, Math.round((cy - bh / 2 - padY) / scale)));
+  const bx2 = Math.max(bx1 + 1, Math.min(W, Math.round((cx + bw / 2 - padX) / scale)));
+  const by2 = Math.max(by1 + 1, Math.min(H, Math.round((cy + bh / 2 - padY) / scale)));
+
+  return {
+    box: { bx1, by1, cropW: bx2 - bx1, cropH: by2 - by1 },
+    detConf: maxConf,
+    detMs
+  };
 }
 
-// Stage 2.5 + Stage 3: crop to height 96 (dynamic width) + recognize
-async function runRecognition(source, box, isStale) {
+// Stage 2.5 + Stage 3: Dynamic aspect crop (96px height) + PP-OCRv6 CTC decode
+async function executeRecognition(source, box) {
   const { bx1, by1, cropW, cropH } = box;
   const targetH = 96;
   const targetW = Math.max(96, Math.round(cropW * (96.0 / cropH)));
-  const c3 = document.createElement('canvas');
-  c3.width = targetW; c3.height = targetH;
-  const ctx3 = c3.getContext('2d');
-  ctx3.drawImage(source, bx1, by1, cropW, cropH, 0, 0, targetW, targetH);
-  const id3 = ctx3.getImageData(0, 0, targetW, targetH).data;
-  const f3 = new Float32Array(3 * targetH * targetW);
+
+  s3Offscreen.width = targetW;
+  s3Offscreen.height = targetH;
+  s3OffCtx.drawImage(source, bx1, by1, cropW, cropH, 0, 0, targetW, targetH);
+
+  // Update crop preview strip canvas
+  cropCanvas.width = targetW;
+  cropCanvas.height = targetH;
+  cropCtx.drawImage(s3Offscreen, 0, 0);
+
+  const imgData = s3OffCtx.getImageData(0, 0, targetW, targetH).data;
+  const f32 = new Float32Array(3 * targetH * targetW);
   const cR = 0, cG = targetH * targetW, cB = 2 * targetH * targetW;
   for (let i = 0, p = 0; i < targetH * targetW; i++, p += 4) {
-    f3[cR + i] = (id3[p] / 255.0 - 0.5) / 0.5;
-    f3[cG + i] = (id3[p + 1] / 255.0 - 0.5) / 0.5;
-    f3[cB + i] = (id3[p + 2] / 255.0 - 0.5) / 0.5;
+    f32[cR + i] = (imgData[p] / 255.0 - 0.5) / 0.5;
+    f32[cG + i] = (imgData[p + 1] / 255.0 - 0.5) / 0.5;
+    f32[cB + i] = (imgData[p + 2] / 255.0 - 0.5) / 0.5;
   }
-  const s3Tensor = new ort.Tensor('float32', f3, [1, 3, targetH, targetW]);
-  const precision = precisionToggle.checked ? 'fp32' : 'fp16';
-  const label = precision === 'fp16' ? 'OCR model (31 MB)' : 'OCR model (62 MB)';
-  const s3sess = await getSession('s3_' + precision, `models/stage3_${precision}.onnx`, label);
-  if (isStale()) return { reading: '', ocrConf: 0, recMs: 0, crop: null };
-  const tRecStart = performance.now();
-  const s3out = await s3sess.run({ x: s3Tensor });
-  const recMs = performance.now() - tRecStart;
-  const outKey = Object.keys(s3out)[0];
-  const s3data = s3out[outKey].data;
-  const timesteps = s3data.length / 12;
+
+  const tensor = new ort.Tensor('float32', f32, [1, 3, targetH, targetW]);
+  const modelName = `stage3_${activeSessionPrecision}.onnx`;
+  const label = activeSessionPrecision === 'fp16' ? 'OCR model (31 MB)' : 'OCR model (62 MB)';
+  const session = await getSession(`s3_${activeSessionPrecision}`, `models/${modelName}`, label);
+
+  const tStart = performance.now();
+  const outputs = await session.run({ x: tensor });
+  const recMs = performance.now() - tStart;
+
+  const outKey = Object.keys(outputs)[0];
+  const logits = outputs[outKey].data;
+  const timesteps = logits.length / 12;
+
   let text = '', lastIdx = 0, confSum = 0, charCount = 0;
   for (let t = 0; t < timesteps; t++) {
     let maxVal = -Infinity, maxIdx = 0;
     for (let c = 0; c < 12; c++) {
-      const val = s3data[t * 12 + c];
+      const val = logits[t * 12 + c];
       if (val > maxVal) { maxVal = val; maxIdx = c; }
     }
     if (maxIdx !== 0 && maxIdx !== lastIdx) {
@@ -561,12 +1013,171 @@ async function runRecognition(source, box, isStale) {
     }
     lastIdx = maxIdx;
   }
-  const avgConfidence = charCount > 0 ? (confSum / charCount) : 0.95;
-  return { reading: text, ocrConf: avgConfidence, recMs, crop: c3.toDataURL() };
+
+  const ocrConf = charCount > 0 ? (confSum / charCount) : 0.95;
+  return { reading: text, ocrConf, recMs };
 }
 
-updateCacheStatus();
-prefetchModels();
+function drawPreview(source, box) {
+  const W = source.naturalWidth || source.videoWidth || source.width;
+  const H = source.naturalHeight || source.videoHeight || source.height;
+  previewCanvas.width = W;
+  previewCanvas.height = H;
+  previewCtx.drawImage(source, 0, 0);
+
+  if (box) {
+    const { bx1, by1, cropW, cropH } = box;
+    previewCtx.strokeStyle = '#10b981';
+    previewCtx.lineWidth = Math.max(3, Math.round(W / 240));
+    previewCtx.strokeRect(bx1, by1, cropW, cropH);
+
+    previewCtx.fillStyle = '#10b981';
+    const tag = 'LCD DISPLAY';
+    const fontSize = Math.max(12, Math.round(W / 45));
+    previewCtx.font = `600 ${fontSize}px sans-serif`;
+    const tagW = previewCtx.measureText(tag).width;
+    previewCtx.fillRect(bx1, Math.max(0, by1 - fontSize - 8), tagW + 12, fontSize + 8);
+
+    previewCtx.fillStyle = '#000000';
+    previewCtx.fillText(tag, bx1 + 6, Math.max(fontSize, by1 - 6));
+  }
+}
+
+function copyReading() {
+  const val = readingValue.textContent;
+  if (!val || val === '--') return;
+  navigator.clipboard.writeText(val);
+  const copyBtn = document.getElementById('copyBtn');
+  copyBtn.textContent = 'Copied!';
+  setTimeout(() => copyBtn.textContent = 'Copy', 1200);
+}
+
+// Live Camera Implementation
+async function toggleCamera() {
+  if (isLiveActive) stopCamera();
+  else startCamera();
+}
+
+async function startCamera() {
+  try {
+    liveStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: cameraFacing, width: { ideal: 1280 }, height: { ideal: 720 } }
+    });
+  } catch (err) {
+    alert('Camera access failed: ' + err.message);
+    return;
+  }
+  const video = document.getElementById('liveVideo');
+  video.srcObject = liveStream;
+  isLiveActive = true;
+  isLivePaused = false;
+  document.getElementById('btnToggleCam').textContent = 'Stop Camera';
+  document.getElementById('btnToggleCam').classList.add('stop');
+  document.getElementById('btnPauseCam').style.display = 'inline-block';
+  document.getElementById('btnFlipCam').style.display = 'inline-block';
+  resultCard.style.display = 'flex';
+  liveGen++;
+  liveCameraLoop();
+}
+
+function stopCamera() {
+  isLiveActive = false;
+  liveGen++;
+  if (liveStream) {
+    liveStream.getTracks().forEach(t => t.stop());
+    liveStream = null;
+  }
+  document.getElementById('btnToggleCam').textContent = 'Start Back Camera';
+  document.getElementById('btnToggleCam').classList.remove('stop');
+  document.getElementById('btnPauseCam').style.display = 'none';
+  document.getElementById('btnFlipCam').style.display = 'none';
+}
+
+function togglePauseCamera() {
+  isLivePaused = !isLivePaused;
+  document.getElementById('btnPauseCam').textContent = isLivePaused ? 'Resume' : 'Pause';
+}
+
+async function flipCamera() {
+  cameraFacing = cameraFacing === 'environment' ? 'user' : 'environment';
+  if (liveStream) liveStream.getTracks().forEach(t => t.stop());
+  try {
+    liveStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: cameraFacing, width: { ideal: 1280 }, height: { ideal: 720 } }
+    });
+    document.getElementById('liveVideo').srcObject = liveStream;
+  } catch(e) {
+    alert('Failed to flip camera: ' + e.message);
+  }
+}
+
+async function liveCameraLoop() {
+  const video = document.getElementById('liveVideo');
+  while (isLiveActive) {
+    if (isLivePaused) {
+      await new Promise(r => setTimeout(r, 100));
+      continue;
+    }
+    if (video.videoWidth > 0) {
+      const currentGen = liveGen;
+      const isStale = () => currentGen !== liveGen;
+      const W = video.videoWidth, H = video.videoHeight;
+      const t0 = performance.now();
+
+      try {
+        let det = null;
+        if (!lastDetectedBox || (liveFrameCount % DETECT_EVERY === 0)) {
+          det = await executeDetection(video, W, H);
+          if (isStale()) { liveFrameCount++; continue; }
+          if (det.error) {
+            lastDetectedBox = null;
+            readingValue.textContent = '--';
+            statusMessage.textContent = det.error;
+            statusMessage.className = 'status-text warn';
+            liveFrameCount++;
+            await new Promise(r => setTimeout(r, 30));
+            continue;
+          }
+          lastDetectedBox = det.box;
+          lastDetConfidence = det.detConf;
+        }
+
+        drawPreview(video, lastDetectedBox);
+        const rec = await executeRecognition(video, lastDetectedBox);
+        if (!isStale()) {
+          const totalMs = performance.now() - t0;
+          readingValue.textContent = rec.reading || '(no digits)';
+          detConfText.textContent = `${(lastDetConfidence * 100).toFixed(1)}%`;
+          latDet.textContent = det ? `${det.detMs.toFixed(1)} ms` : 'reused';
+          latRec.textContent = `${rec.recMs.toFixed(1)} ms`;
+          latTotal.textContent = `${totalMs.toFixed(1)} ms`;
+          latFps.textContent = (1000 / totalMs).toFixed(1);
+        }
+      } catch (err) {
+        console.error(err);
+      }
+      liveFrameCount++;
+    }
+    await new Promise(r => setTimeout(r, 20));
+  }
+}
+
+// Initial engine status check
+if (typeof self !== 'undefined' && self.crossOriginIsolated) {
+  backendBadge.textContent = `Engine: WASM (${numHardwareThreads} threads)`;
+} else {
+  backendBadge.textContent = 'Engine: WASM (1 thread)';
+}
+updateCacheStatusUI();
+
+// Prefetch base weights in background
+(window.requestIdleCallback || (cb => setTimeout(cb, 400)))(async () => {
+  try {
+    await getSession('s2', 'models/stage2.onnx', 'Detector model (10.6 MB)');
+    await getSession('s3_fp16', 'models/stage3_fp16.onnx', 'OCR model (31 MB)');
+  } catch(e){}
+});
 </script>
+
 </body>
 </html>

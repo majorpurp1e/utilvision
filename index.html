@@ -36,13 +36,18 @@
     --red: #ef4444;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    overflow-x: hidden;
+    width: 100%;
+    max-width: 100vw;
+  }
   body {
     background: var(--bg);
     color: var(--text);
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
     line-height: 1.5;
     min-height: 100vh;
-    padding: 24px 16px 40px;
+    padding: 20px 14px 40px;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -613,6 +618,17 @@
       justify-content: space-between;
       align-items: center;
       width: 100%;
+    }
+  }
+  @media (max-width: 520px) {
+    body {
+      padding: 12px 10px 32px;
+    }
+    .card, .result-card {
+      padding: 14px 12px;
+    }
+    .sub {
+      max-width: 100%;
     }
   }
 

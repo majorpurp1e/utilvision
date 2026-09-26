@@ -18,6 +18,11 @@
     --border: #1f2937;
   }
   * { box-sizing: border-box; }
+  html, body {
+    overflow-x: hidden;
+    width: 100%;
+    max-width: 100vw;
+  }
   body {
     margin: 0;
     background: var(--bg);
@@ -26,9 +31,10 @@
     line-height: 1.6;
   }
   .wrap {
+    width: 100%;
     max-width: 860px;
     margin: 0 auto;
-    padding: 32px 20px 60px;
+    padding: 24px 16px 60px;
   }
   .nav {
     display: flex;
@@ -158,6 +164,20 @@
     margin: 0 0 10px;
     font-size: 0.84rem;
     color: #cbd5e1;
+  }
+  .table-wrap {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    margin-top: 14px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+  }
+  .table-wrap table {
+    margin-top: 0;
+    border: none;
+    border-radius: 0;
+    min-width: 540px;
   }
   table {
     width: 100%;
@@ -938,7 +958,10 @@
   }
   @media (max-width: 640px) {
     .wrap {
-      padding: 20px 12px 48px;
+      padding: 16px 12px 48px;
+    }
+    p, .sub {
+      max-width: 100%;
     }
     .stats {
       grid-template-columns: repeat(2, 1fr);
@@ -953,6 +976,9 @@
     }
   }
   @media (max-width: 520px) {
+    .wrap {
+      padding: 14px 10px 36px;
+    }
     h1 { font-size: 1.4rem; }
     .sub { font-size: 0.86rem; margin-bottom: 20px; }
     .pipe-flow-grid {
@@ -1393,19 +1419,21 @@
       <!-- Collapsible Full Matrix Table -->
       <details class="matrix-toggle">
         <summary>View Complete Benchmark Progression Table (10 Generations) ▼</summary>
-        <table>
-          <tr><th>Gen</th><th>Architecture &amp; Training Strategy</th><th>Exact Match</th><th>Digit Acc</th><th>Industrial (Set C)</th></tr>
-          <tr><td>1</td><td>Off-the-shelf CRNN baseline</td><td class="mono">24.1%</td><td class="mono">61.4%</td><td class="mono">8.2%</td></tr>
-          <tr><td>2</td><td>Custom 7-segment digit dictionary</td><td class="mono">52.8%</td><td class="mono">81.3%</td><td class="mono">19.5%</td></tr>
-          <tr><td>3</td><td>ResNet-18 visual feature extractor</td><td class="mono">68.3%</td><td class="mono">88.9%</td><td class="mono">31.2%</td></tr>
-          <tr><td>4</td><td>SVTR visual token interaction neck</td><td class="mono">74.1%</td><td class="mono">91.2%</td><td class="mono">38.6%</td></tr>
-          <tr><td>5</td><td>Targeted photometric and blur augmentations</td><td class="mono">81.4%</td><td class="mono">94.1%</td><td class="mono">46.2%</td></tr>
-          <tr><td>6</td><td>Dual-domain domestic and commercial balancing</td><td class="mono">85.9%</td><td class="mono">95.8%</td><td class="mono">49.8%</td></tr>
-          <tr><td>7</td><td>Industrial high-voltage domain integration</td><td class="mono">89.4%</td><td class="mono">97.1%</td><td class="mono">50.4%</td></tr>
-          <tr><td>8</td><td>High-density annotation boundary audit</td><td class="mono">91.8%</td><td class="mono">97.8%</td><td class="mono">51.7%</td></tr>
-          <tr><td>9</td><td>Canonical 96px aspect-preserving crop normalization</td><td class="mono">94.1%</td><td class="mono">98.6%</td><td class="mono">84.6%</td></tr>
-          <tr><td>10</td><td>Champion Stage3DetectorV1 (synthetic glare &amp; segment cutout)</td><td class="mono">96.5%</td><td class="mono">99.4%</td><td class="mono">96.2%</td></tr>
-        </table>
+        <div class="table-wrap">
+          <table>
+            <tr><th>Gen</th><th>Architecture &amp; Training Strategy</th><th>Exact Match</th><th>Digit Acc</th><th>Industrial (Set C)</th></tr>
+            <tr><td>1</td><td>Off-the-shelf CRNN baseline</td><td class="mono">24.1%</td><td class="mono">61.4%</td><td class="mono">8.2%</td></tr>
+            <tr><td>2</td><td>Custom 7-segment digit dictionary</td><td class="mono">52.8%</td><td class="mono">81.3%</td><td class="mono">19.5%</td></tr>
+            <tr><td>3</td><td>ResNet-18 visual feature extractor</td><td class="mono">68.3%</td><td class="mono">88.9%</td><td class="mono">31.2%</td></tr>
+            <tr><td>4</td><td>SVTR visual token interaction neck</td><td class="mono">74.1%</td><td class="mono">91.2%</td><td class="mono">38.6%</td></tr>
+            <tr><td>5</td><td>Targeted photometric and blur augmentations</td><td class="mono">81.4%</td><td class="mono">94.1%</td><td class="mono">46.2%</td></tr>
+            <tr><td>6</td><td>Dual-domain domestic and commercial balancing</td><td class="mono">85.9%</td><td class="mono">95.8%</td><td class="mono">49.8%</td></tr>
+            <tr><td>7</td><td>Industrial high-voltage domain integration</td><td class="mono">89.4%</td><td class="mono">97.1%</td><td class="mono">50.4%</td></tr>
+            <tr><td>8</td><td>High-density annotation boundary audit</td><td class="mono">91.8%</td><td class="mono">97.8%</td><td class="mono">51.7%</td></tr>
+            <tr><td>9</td><td>Canonical 96px aspect-preserving crop normalization</td><td class="mono">94.1%</td><td class="mono">98.6%</td><td class="mono">84.6%</td></tr>
+            <tr><td>10</td><td>Champion Stage3DetectorV1 (synthetic glare &amp; segment cutout)</td><td class="mono">96.5%</td><td class="mono">99.4%</td><td class="mono">96.2%</td></tr>
+          </table>
+        </div>
       </details>
     </div>
   </section>

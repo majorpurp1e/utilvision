@@ -11,12 +11,13 @@
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='18' fill='%230f172a'/%3E%3Ctext x='50' y='68' font-size='58' text-anchor='middle' fill='%2310b981' font-family='monospace'%3E7%3C/text%3E%3C/svg%3E">
 <script>
-  // Mobile gets the lightweight WASM-only bundle (300KB).
-  // Desktop gets the full bundle with WebGPU backend (710KB).
-  // document.write is synchronous during HTML parse - ORT is ready before our init runs.
+  // Desktop: always ort.all.min.js (WebGPU).
+  // Mobile + WebNN API present: ort.all.min.js (WebNN backend needed).
+  // Mobile without WebNN: ort.min.js (lightweight WASM-only, saves 400KB).
   (function(){
     var mob = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-    var bundle = mob ? 'ort.min.js' : 'ort.all.min.js';
+    var hasWebNN = ('ml' in navigator);
+    var bundle = (!mob || hasWebNN) ? 'ort.all.min.js' : 'ort.min.js';
     document.write('<scr'+'ipt src="https://cdn.jsdelivr.net/npm/onnxruntime-web@1.21.0/dist/'+bundle+'" crossorigin="anonymous"><\/scr'+'ipt>');
   })();
 </script>
@@ -803,34 +804,47 @@ ort.env.wasm.wasmPaths = 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.21.0/di
 
 // ── Provider Detection ─────────────────────────────────────────────────────
 // Desktop: WebGPU -> WASM multi-thread -> WASM single-thread
-// Mobile:  WASM multi-thread -> WASM single-thread (WebGPU skipped)
+// Mobile:  WebNN (NPU) -> WASM multi-thread -> WASM single-thread
 //
-// Mobile WebGPU (Adreno/Apple GPU in browser) silently produces numerically
-// wrong output for our model architectures despite appearing to run correctly.
-// Desktop GPU drivers (NVIDIA/AMD/Intel via Chrome/Edge) work reliably.
+// Mobile WebGPU skipped: Adreno drivers produce silent numerical corruption.
+// WebNN targets the Hexagon NPU (Snapdragon) / ANE (Apple) which are purpose-
+// built for inference and have reliable numerical output.
 let detectedProvider = 'wasm';
 let activeProvider = 'wasm';
 
-// True for Android and iOS phones/tablets
 const isMobileBrowser = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 
 async function probeWebGPU() {
-  if (isMobileBrowser) return false; // skip - mobile WebGPU drivers produce wrong results
-  if (typeof navigator === 'undefined' || !navigator.gpu) return false;
+  if (isMobileBrowser) return false;
+  if (!navigator.gpu) return false;
   try {
     const adapter = await navigator.gpu.requestAdapter({ powerPreference: 'high-performance' });
     return !!adapter;
+  } catch (e) { return false; }
+}
+
+async function probeWebNN() {
+  if (!isMobileBrowser) return false;
+  if (typeof navigator === 'undefined' || !navigator.ml) return false;
+  try {
+    return typeof navigator.ml.createContext === 'function';
   } catch (e) {
     return false;
   }
 }
 
 function updateBackendBadge() {
-  if (activeProvider === 'webgpu') {
+  const provider = (activeProvider && activeProvider !== 'wasm') ? activeProvider : detectedProvider;
+  if (provider === 'webgpu') {
     backendBadge.textContent = 'Engine: WebGPU (GPU Accelerated)';
     backendBadge.style.background = 'rgba(6,182,212,0.15)';
     backendBadge.style.borderColor = 'rgba(6,182,212,0.5)';
     backendBadge.style.color = '#06b6d4';
+  } else if (provider === 'webnn') {
+    backendBadge.textContent = 'Engine: WebNN (NPU Accelerated)';
+    backendBadge.style.background = 'rgba(139,92,246,0.15)';
+    backendBadge.style.borderColor = 'rgba(139,92,246,0.5)';
+    backendBadge.style.color = '#8b5cf6';
   } else if (numHardwareThreads > 1) {
     backendBadge.textContent = `Engine: WASM (${numHardwareThreads} threads)`;
     backendBadge.style.background = '';
@@ -979,27 +993,22 @@ async function getSession(key, url, label) {
   if (!sessions[key]) {
     const buffer = await fetchModelWithProgress(url, label);
 
+    // ── WebGPU path (desktop) ─────────────────────────────────────────────
     if (detectedProvider === 'webgpu') {
       progressLabel.textContent = `Compiling ${label}...`;
       progressSub.textContent = 'Loading GPU shaders. This takes a moment on first run.';
       progressFill.style.width = '100%';
       try {
         sessions[key] = await ort.InferenceSession.create(buffer, {
-          executionProviders: [
-            { name: 'webgpu', preferredOutputLocation: 'cpu' },
-            'wasm'
-          ]
+          executionProviders: [{ name: 'webgpu', preferredOutputLocation: 'cpu' }, 'wasm'],
+          graphOptimizationLevel: 'all'
         });
         activeProvider = 'webgpu';
         updateBackendBadge();
         progressWrap.style.display = 'none';
         return sessions[key];
-      } catch (gpuErr) {
-        const msg = gpuErr.message || String(gpuErr);
-        console.warn('[UtilVision] WebGPU session create failed:', msg);
-        // Show error visibly so we can diagnose remotely
-        statusMessage.textContent = '[WebGPU create] ' + msg;
-        statusMessage.className = 'status-text warn';
+      } catch (e) {
+        console.warn('[UtilVision] WebGPU session failed:', e.message);
         delete sessions[key];
         detectedProvider = 'wasm';
         activeProvider = 'wasm';
@@ -1007,30 +1016,55 @@ async function getSession(key, url, label) {
       }
     }
 
-    // Pure WASM path
+    // ── WebNN path (mobile - targets Hexagon NPU / Apple ANE) ────────────
+    if (detectedProvider === 'webnn') {
+      progressLabel.textContent = `Compiling ${label}...`;
+      progressSub.textContent = 'Loading NPU kernels via WebNN...';
+      progressFill.style.width = '100%';
+      try {
+        sessions[key] = await ort.InferenceSession.create(buffer, {
+          executionProviders: [{ name: 'webnn' }, 'wasm'],
+          graphOptimizationLevel: 'all'
+        });
+        activeProvider = 'webnn';
+        updateBackendBadge();
+        progressWrap.style.display = 'none';
+        return sessions[key];
+      } catch (e) {
+        console.warn('[UtilVision] WebNN session failed:', e.message);
+        delete sessions[key];
+        detectedProvider = 'wasm';
+        activeProvider = 'wasm';
+        updateBackendBadge();
+      }
+    }
+
+    // ── WASM fallback (always works) ──────────────────────────────────────
     progressLabel.textContent = `Compiling ${label}...`;
     progressSub.textContent = `Initializing WASM execution provider (${numHardwareThreads} thread${numHardwareThreads > 1 ? 's' : ''})...`;
     progressFill.style.width = '100%';
     sessions[key] = await ort.InferenceSession.create(buffer, {
-      executionProviders: ['wasm']
+      executionProviders: ['wasm'],
+      graphOptimizationLevel: 'all'
     });
     progressWrap.style.display = 'none';
   }
   return sessions[key];
 }
 
-// Wraps session.run() with WebGPU->WASM fallback on:
-//   (a) thrown errors (GPU context loss, OOM)
-//   (b) silent numerical corruption (all-zero/NaN output - common on mobile GPU drivers)
+// Wraps session.run() with hardware provider -> WASM fallback on:
+//   (a) thrown errors (context loss, OOM, unsupported op at runtime)
+//   (b) silent numerical corruption (all-zero/NaN - known mobile driver issue)
 async function safeRun(key, url, label, feeds) {
   let session = await getSession(key, url, label);
+  const isHardwareProvider = () => activeProvider === 'webgpu' || activeProvider === 'webnn';
 
   let result;
   try {
     result = await session.run(feeds);
   } catch (runErr) {
-    if (activeProvider === 'webgpu') {
-      console.warn('[UtilVision] GPU run threw, falling back to WASM:', runErr.message);
+    if (isHardwareProvider()) {
+      console.warn('[UtilVision] Hardware run threw, falling back to WASM:', runErr.message);
       delete sessions[key];
       detectedProvider = 'wasm';
       activeProvider = 'wasm';
@@ -1041,10 +1075,8 @@ async function safeRun(key, url, label, feeds) {
     throw runErr;
   }
 
-  // Validate output for silent GPU numerical corruption.
-  // A legitimate model output will always have at least one value with |v| > 1e-4.
-  // All-zero or all-NaN output means the GPU driver produced garbage silently.
-  if (activeProvider === 'webgpu') {
+  // Validate output for silent numerical corruption (applies to any hardware provider)
+  if (isHardwareProvider()) {
     const firstOutput = Object.values(result)[0]?.data;
     if (firstOutput) {
       let maxAbs = 0, hasNaN = false;
@@ -1054,9 +1086,7 @@ async function safeRun(key, url, label, feeds) {
         if (Math.abs(firstOutput[i]) > maxAbs) maxAbs = Math.abs(firstOutput[i]);
       }
       if (hasNaN || maxAbs < 1e-4) {
-        console.warn('[UtilVision] GPU output corrupt (maxAbs=' + maxAbs + ', NaN=' + hasNaN + '), evicting GPU session');
-        // Permanently fall back to WASM for this page session -
-        // mobile GPU driver is producing wrong numbers
+        console.warn('[UtilVision] Hardware output corrupt (maxAbs=' + maxAbs + '), falling back to WASM');
         delete sessions[key];
         detectedProvider = 'wasm';
         activeProvider = 'wasm';
@@ -1069,6 +1099,7 @@ async function safeRun(key, url, label, feeds) {
 
   return result;
 }
+
 
 
 
@@ -1533,11 +1564,17 @@ updateCacheStatusUI();
 updateBackendBadge(); // initial: shows WASM while probe runs
 
 (async () => {
-  // 1. Probe for WebGPU adapter (resolves in <50ms on any browser)
+  // 1. Probe for WebGPU adapter (desktop) or WebNN context (mobile)
   const hasGPU = await probeWebGPU();
   if (hasGPU) {
     detectedProvider = 'webgpu';
-    updateBackendBadge(); // flips to "WebGPU (GPU Accelerated)" immediately
+    updateBackendBadge();
+  } else {
+    const hasNN = await probeWebNN();
+    if (hasNN) {
+      detectedProvider = 'webnn';
+      updateBackendBadge();
+    }
   }
 
   // 2. Prefetch and compile both models in background via idle callback.

@@ -618,7 +618,8 @@
   }
   .pipe-img-frame {
     width: 100%;
-    height: 110px;
+    aspect-ratio: 1 / 1;
+    max-height: 180px;
     background: #040810;
     border-radius: 6px;
     border: 1px solid #1e293b;
@@ -631,13 +632,13 @@
   .pipe-img-frame img {
     width: 100%;
     height: 100%;
-    object-fit: cover;
+    object-fit: contain;
     display: block;
+    padding: 2px;
   }
   .pipe-img-frame.crop-frame img {
     object-fit: contain;
     padding: 6px;
-    max-height: 90px;
   }
   .pipe-meta {
     font-size: 0.72rem;
@@ -751,16 +752,21 @@
   }
   .domain-pthumb {
     width: 100%;
-    height: 130px;
-    background: #0b111c;
+    aspect-ratio: 4 / 3;
+    max-height: 200px;
+    background: #060b14;
     position: relative;
     overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
   .domain-pthumb img {
     width: 100%;
     height: 100%;
-    object-fit: cover;
+    object-fit: contain;
     display: block;
+    padding: 4px;
   }
   .domain-ptag {
     position: absolute;

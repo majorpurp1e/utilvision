@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>How UtilVision Works — Architecture &amp; Benchmarks</title>
+<meta name="description" content="How UtilVision reads utility meter LCDs on-device: two-stage YOLOv11n + PP-OCRv6 architecture, dataset engineering, and benchmark results.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='18' fill='%2311161C'/%3E%3Ctext x='50' y='68' font-size='58' text-anchor='middle' fill='%23FFB454' font-family='monospace'%3E7%3C/text%3E%3C/svg%3E">
+<style>
+  :root{--bg:#11161C;--panel:#1A212B;--text:#E8ECF1;--muted:#8B96A5;
+    --amber:#FFB454;--green:#6EE7B7;--border:#262E38}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);
+    font-family:-apple-system,'Segoe UI',Roboto,sans-serif;line-height:1.6}
+  .wrap{max-width:720px;margin:0 auto;padding:32px 20px 60px}
+  .nav{display:flex;justify-content:flex-end;margin-bottom:20px}
+  .nav a{color:var(--amber);font-size:.85rem;text-decoration:none;border-bottom:1px solid var(--amber)}
+  h1{font-size:1.7rem;margin:0 0 8px;letter-spacing:-.01em}
+  .sub{color:var(--muted);max-width:56ch;margin:0 0 28px}
+  .mono{font-family:'SF Mono',Consolas,monospace;font-variant-numeric:tabular-nums}
+  section{margin-bottom:36px}
+  h2{font-size:1.05rem;color:var(--amber);margin:0 0 4px}
+  .seq{font-size:.72rem;color:var(--muted);letter-spacing:.05em}
+  p{color:#C8D0DA;max-width:66ch}
+  .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin:20px 0}
+  .stat{background:var(--panel);border-radius:10px;padding:16px}
+  .stat .n{font-size:1.5rem;color:var(--amber)}
+  .stat .l{font-size:.72rem;color:var(--muted);margin-top:4px}
+  .stage{background:var(--panel);border-radius:10px;padding:16px 18px;margin-bottom:10px;
+    border-left:2px solid var(--amber)}
+  .stage h3{font-size:.95rem;margin:0 0 4px}
+  .stage .meta{font-size:.78rem;color:var(--muted)}
+  .fail-grid{display:grid;gap:10px}
+  .fail{background:var(--panel);border-radius:8px;padding:14px 16px}
+  .fail b{color:var(--text);display:block;margin-bottom:3px;font-size:.9rem}
+  .fail span{color:var(--muted);font-size:.85rem}
+  .domains{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+  .domain{background:var(--panel);border-radius:8px;padding:14px;text-align:center}
+  .domain .n{font-size:1.2rem;color:var(--green)}
+  .domain .l{font-size:.75rem;color:var(--muted);margin-top:4px}
+  table{width:100%;border-collapse:collapse;font-size:.85rem}
+  th,td{text-align:left;padding:7px 10px;border-bottom:1px solid var(--border)}
+  th{color:var(--muted);font-weight:500;font-size:.75rem}
+  td.mono{color:var(--green)}
+  .cta{background:var(--panel);border-radius:10px;padding:20px;text-align:center;margin-top:10px}
+  .cta a{background:var(--amber);color:#1A140A;padding:12px 20px;border-radius:8px;
+    text-decoration:none;font-weight:600;display:inline-block;margin-top:10px}
+  @media (max-width:480px){
+    .stats,.domains{grid-template-columns:repeat(2,1fr)}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="nav"><a href="index.html">← Try the live demo</a></div>
+  <h1>How UtilVision reads a meter</h1>
+  <p class="sub">A two-stage edge vision pipeline built to solve one specific, unglamorous
+    problem: getting an exact numeric reading off a utility meter's LCD, on-device, for free.</p>
+
+  <div class="stats">
+    <div class="stat"><div class="n mono">100%</div><div class="l">meter detection recall</div></div>
+    <div class="stat"><div class="n mono">78.7ms</div><div class="l">edge GPU latency</div></div>
+    <div class="stat"><div class="n mono">$0.00</div><div class="l">per-read API cost</div></div>
+  </div>
+
+  <section>
+    <h2>Why generic OCR fails here</h2>
+    <p>Tesseract, EasyOCR, and default PaddleOCR all collapse on utility meters, for four
+      distinct, well-understood reasons — not just "the model wasn't fine-tuned."</p>
+    <div class="fail-grid">
+      <div class="fail"><b>Faceplate text clutter</b>
+        <span>Text detectors latch onto printed serial numbers or manufacture years instead
+          of the active LCD reading.</span></div>
+      <div class="fail"><b>7-segment digit disconnection</b>
+        <span>Models trained on continuous Latin strokes fracture unlit LCD segment gaps into
+          wrong letters (0→N, 8→B).</span></div>
+      <div class="fail"><b>Unit icon interference</b>
+        <span>"kWh" / "kW" glyph borders get misread as extra trailing digits, risking 10–100×
+          billing errors.</span></div>
+      <div class="fail"><b>Leading-zero stripping</b>
+        <span>Naive numeric coercion turns "007888.54" into "7888.54," silently corrupting
+          billing reconciliation.</span></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Three-stage architecture</h2>
+    <div class="stage">
+      <span class="seq">STAGE 1</span>
+      <h3>YOLOv11n LCD detector</h3>
+      <p class="meta">Locates and crops the display out of the full meter photo, discarding
+        faceplate clutter, barcodes, and serials. ~30ms on edge GPU.</p>
+    </div>
+    <div class="stage">
+      <span class="seq">STAGE 2</span>
+      <h3>Dynamic crop normalization → fixed 96px height</h3>
+      <p class="meta">The crop is resized to a canonical <b>96px height</b> (width scales to
+        preserve aspect ratio) and contrast-normalized. This exact resolution was chosen after
+        an ablation traced decimal-point loss to a lower-resolution resize shrinking the
+        physical decimal dot below one pixel.</p>
+    </div>
+    <div class="stage">
+      <span class="seq">STAGE 3</span>
+      <h3>PP-OCRv6 SVTR-CTC recognizer</h3>
+      <p class="meta">A CTC head pruned to exactly 11 tokens (0–9, "."), so unit-icon glyphs are
+        structurally impossible to hallucinate as digits. ~45ms on edge GPU.</p>
+    </div>
+  </section>
+
+  <section>
+    <h2>Dataset: fixing a leakage bug that hid a real failure</h2>
+    <p>An early version of this pipeline looked strong until a splitting bug was found: photos
+      of the same physical meter were appearing in both train and validation sets, masking a
+      real collapse on industrial meters. The dataset was rebuilt with strict physical
+      meter-grouped splitting — no meter's photos can appear in more than one split.</p>
+    <div class="domains">
+      <div class="domain"><div class="n">Domestic</div><div class="l">single-phase residential LCDs</div></div>
+      <div class="domain"><div class="n">Commercial</div><div class="l">mixed installs, dirty glass, dim segments</div></div>
+      <div class="domain"><div class="n">Industrial</div><div class="l">3-phase, multi-line registers</div></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Ten generations of the recognizer</h2>
+    <p>Rather than lead with one final accuracy number, here's the actual engineering
+      trajectory — exact-match rate across the project's full model history, evaluated
+      consistently on the same held-out pool:</p>
+    <table>
+      <tr><th>Generation</th><th>What changed</th><th>Exact match</th></tr>
+      <tr><td>1</td><td>Off-the-shelf CRNN baseline</td><td class="mono">24.1%</td></tr>
+      <tr><td>3</td><td>ResNet-18 visual backbone</td><td class="mono">68.3%</td></tr>
+      <tr><td>5</td><td>Photometric augmentation added</td><td class="mono">81.4%</td></tr>
+      <tr><td>7</td><td>First exposure to industrial domain</td><td class="mono">89.4%</td></tr>
+      <tr><td>9</td><td>Meter-grouped split leakage fixed</td><td class="mono">94.1%</td></tr>
+      <tr><td>10</td><td>Current: targeted augmentation, hardened splits</td><td class="mono">96.5%</td></tr>
+    </table>
+    <p style="font-size:.8rem;color:var(--muted);margin-top:10px">Figures are from internal
+      benchmark evaluation and are under continued revalidation as held-out testing expands.</p>
+  </section>
+
+  <section>
+    <h2>Roadmap</h2>
+    <p>INT8 quantization to shrink the combined pipeline toward ~6–7MB for faster first-load;
+      multi-threaded in-browser inference where hosting supports cross-origin isolation;
+      progressive detection reuse in live video to cut per-frame cost further.</p>
+  </section>
+
+  <div class="cta">
+    <p style="margin:0">See the numbers above running for real, on your own camera.</p>
+    <a href="index.html">Open the live demo →</a>
+  </div>
+</div>
+</body>
+</html>

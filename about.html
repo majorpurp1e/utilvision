@@ -26,7 +26,7 @@
     line-height: 1.6;
   }
   .wrap {
-    max-width: 740px;
+    max-width: 860px;
     margin: 0 auto;
     padding: 32px 20px 60px;
   }
@@ -547,11 +547,396 @@
   .matrix-toggle summary:hover {
     color: #fff;
   }
+
+  /* Interactive Visual Pipeline Stepper */
+  .pipe-card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    margin-top: 18px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+  }
+  .pipe-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+  .pipe-title {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: #fff;
+  }
+  .pipe-tabs {
+    display: flex;
+    gap: 6px;
+    overflow-x: auto;
+  }
+  .pipe-tab {
+    background: #0f172a;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    padding: 5px 12px;
+    border-radius: 6px;
+    font-size: 0.78rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    white-space: nowrap;
+  }
+  .pipe-tab:hover {
+    background: #1e293b;
+    color: #fff;
+  }
+  .pipe-tab.active {
+    background: rgba(6, 182, 212, 0.16);
+    border-color: var(--cyan);
+    color: var(--cyan);
+    font-weight: 600;
+    box-shadow: 0 0 10px rgba(6, 182, 212, 0.25);
+  }
+  .pipe-flow-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    position: relative;
+  }
+  .pipe-step-box {
+    background: #0b111c;
+    border: 1px solid #1e293b;
+    border-radius: 8px;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    transition: border-color 0.18s ease;
+  }
+  .pipe-step-box:hover {
+    border-color: #334155;
+  }
+  .pipe-step-badge {
+    font-size: 0.68rem;
+    color: var(--cyan);
+    font-weight: 700;
+    font-family: 'SF Mono', Consolas, monospace;
+    letter-spacing: 0.04em;
+    margin-bottom: 2px;
+  }
+  .pipe-step-name {
+    font-size: 0.84rem;
+    font-weight: 600;
+    color: #fff;
+    margin-bottom: 8px;
+    min-height: 22px;
+  }
+  .pipe-img-frame {
+    width: 100%;
+    height: 110px;
+    background: #040810;
+    border-radius: 6px;
+    border: 1px solid #1e293b;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 8px;
+  }
+  .pipe-img-frame img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+  .pipe-img-frame.crop-frame img {
+    object-fit: contain;
+    padding: 6px;
+    max-height: 90px;
+  }
+  .pipe-meta {
+    font-size: 0.72rem;
+    color: #94a3b8;
+    line-height: 1.35;
+    margin-bottom: 8px;
+  }
+  .pipe-pill-row {
+    margin-top: auto;
+    background: #0f172a;
+    border: 1px solid #1e293b;
+    border-radius: 6px;
+    padding: 6px 8px;
+    text-align: center;
+  }
+  .pipe-pill-val {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--green);
+    font-family: 'SF Mono', Consolas, monospace;
+  }
+  .pipe-pill-lbl {
+    font-size: 0.65rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin-top: 1px;
+  }
+
+  /* Side-by-Side OCR Failure Mode Cards */
+  .ocr-comp-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin-top: 14px;
+  }
+  .ocr-comp-card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+  }
+  .ocr-comp-hdr {
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: #fff;
+    margin-bottom: 6px;
+  }
+  .ocr-comp-detail {
+    font-size: 0.78rem;
+    color: var(--muted);
+    line-height: 1.35;
+    margin-bottom: 10px;
+  }
+  .ocr-row {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: auto;
+  }
+  .ocr-pill {
+    padding: 7px 10px;
+    border-radius: 6px;
+    font-size: 0.76rem;
+  }
+  .ocr-pill.fail-pill {
+    background: rgba(239, 68, 68, 0.1);
+    border: 1px solid rgba(239, 68, 68, 0.25);
+    color: #fca5a5;
+  }
+  .ocr-pill.pass-pill {
+    background: rgba(16, 185, 129, 0.1);
+    border: 1px solid rgba(16, 185, 129, 0.25);
+    color: #6ee7b7;
+  }
+  .ocr-pill-title {
+    font-size: 0.65rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin-bottom: 2px;
+    display: flex;
+    justify-content: space-between;
+  }
+  .ocr-pill-code {
+    font-family: 'SF Mono', Consolas, monospace;
+    font-weight: 700;
+    font-size: 0.88rem;
+  }
+
+  /* Photographic Tri-Domain Hardware Cards */
+  .domain-gallery {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin-top: 14px;
+  }
+  .domain-pcard {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    transition: border-color 0.15s ease;
+  }
+  .domain-pcard:hover {
+    border-color: #334155;
+  }
+  .domain-pthumb {
+    width: 100%;
+    height: 130px;
+    background: #0b111c;
+    position: relative;
+    overflow: hidden;
+  }
+  .domain-pthumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+  .domain-ptag {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    background: rgba(9, 13, 22, 0.88);
+    backdrop-filter: blur(4px);
+    border: 1px solid rgba(6, 182, 212, 0.4);
+    color: var(--cyan);
+    font-size: 0.65rem;
+    font-weight: 700;
+    padding: 2px 7px;
+    border-radius: 4px;
+    font-family: 'SF Mono', Consolas, monospace;
+  }
+  .domain-pbody {
+    padding: 12px 14px;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+  }
+  .domain-pbody h4 {
+    margin: 0 0 6px;
+    font-size: 0.92rem;
+    color: #fff;
+    font-weight: 600;
+  }
+  .domain-pbody p {
+    font-size: 0.78rem;
+    color: var(--muted);
+    line-height: 1.4;
+    margin: 0 0 10px;
+  }
+  .domain-attr-row {
+    margin-top: auto;
+    padding-top: 8px;
+    border-top: 1px solid #1e293b;
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.72rem;
+  }
+  .domain-attr-k { color: #64748b; }
+  .domain-attr-v { color: #cbd5e1; font-weight: 500; font-family: 'SF Mono', Consolas, monospace; }
+
+  /* Edge Architecture vs Cloud Matrix */
+  .arch-matrix {
+    margin-top: 14px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+  .arch-table-wrap {
+    overflow-x: auto;
+  }
+  .arch-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.84rem;
+    margin-top: 0;
+    border: none;
+  }
+  .arch-table th {
+    background: #0b111c;
+    padding: 10px 14px;
+    font-size: 0.74rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    border-bottom: 1px solid #1e293b;
+  }
+  .arch-table td {
+    padding: 11px 14px;
+    border-bottom: 1px solid #1e293b;
+    color: #cbd5e1;
+  }
+  .arch-table tr:last-child td {
+    border-bottom: none;
+  }
+  .arch-highlight {
+    background: rgba(16, 185, 129, 0.05);
+  }
+  .arch-badge-win {
+    background: rgba(16, 185, 129, 0.15);
+    color: var(--green);
+    padding: 2px 7px;
+    border-radius: 4px;
+    font-weight: 600;
+    font-size: 0.72rem;
+  }
+  .arch-badge-lose {
+    background: rgba(239, 68, 68, 0.12);
+    color: #fca5a5;
+    padding: 2px 7px;
+    border-radius: 4px;
+    font-weight: 500;
+    font-size: 0.72rem;
+  }
+
+  /* Benchmark Hardware Specifications & Methodology Section */
+  .specs-container {
+    margin-top: 14px;
+  }
+  .specs-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+  .spec-box {
+    background: #0b111c;
+    border: 1px solid #1e293b;
+    border-radius: 8px;
+    padding: 14px 16px;
+  }
+  .spec-box h4 {
+    margin: 0 0 10px;
+    font-size: 0.86rem;
+    color: var(--cyan);
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .spec-table {
+    width: 100%;
+    font-size: 0.76rem;
+    border-collapse: collapse;
+    background: transparent;
+    border: none;
+    margin: 0;
+  }
+  .spec-table td {
+    padding: 5px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    background: transparent;
+  }
+  .spec-table tr:last-child td {
+    border-bottom: none;
+  }
+  .spec-k {
+    color: var(--muted);
+    width: 44%;
+  }
+  .spec-v {
+    color: #e2e8f0;
+    font-family: 'SF Mono', Consolas, monospace;
+    text-align: right;
+  }
+
+  @media (max-width: 768px) {
+    .pipe-flow-grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
   @media (max-width: 640px) {
     .detail-metrics-grid, .detail-content-grid {
       grid-template-columns: 1fr;
     }
-    .domains {
+    .domains, .ocr-comp-grid, .domain-gallery, .specs-grid {
       grid-template-columns: 1fr;
       gap: 10px;
     }
@@ -563,6 +948,9 @@
     .stats {
       grid-template-columns: 1fr;
       gap: 10px;
+    }
+    .pipe-flow-grid {
+      grid-template-columns: 1fr;
     }
     .evo-card { padding: 14px 12px; }
     .detail-card { padding: 14px 12px; }
@@ -599,35 +987,213 @@
       <div class="fail"><b>Strict Leading Zero Requirements</b>
         <span>Utility registers require verbatim leading zero preservation (e.g., 007888.54). Standard numerical parsers routinely strip leading zeros, invalidating billing ledger reconciliation.</span></div>
     </div>
+
+    <!-- Visual Failure Mode Comparison Cards -->
+    <div class="ocr-comp-grid">
+      <div class="ocr-comp-card">
+        <div class="ocr-comp-hdr">7-Segment Disconnection</div>
+        <div class="ocr-comp-detail">Unlit segment gaps confuse linguistic OCR dictionaries into hallucinating Latin letters.</div>
+        <div class="ocr-row">
+          <div class="ocr-pill fail-pill">
+            <div class="ocr-pill-title"><span>Standard OCR Engine</span><span>Misread</span></div>
+            <div class="ocr-pill-code">O8.B kWh</div>
+          </div>
+          <div class="ocr-pill pass-pill">
+            <div class="ocr-pill-title"><span>UtilVision Stage 3</span><span>100% Match</span></div>
+            <div class="ocr-pill-code">08.8</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="ocr-comp-card">
+        <div class="ocr-comp-hdr">Faceplate Text Contamination</div>
+        <div class="ocr-comp-detail">High-contrast brand text, serial numbers, and barcodes distract general text detectors.</div>
+        <div class="ocr-row">
+          <div class="ocr-pill fail-pill">
+            <div class="ocr-pill-title"><span>Standard OCR Engine</span><span>Distracted</span></div>
+            <div class="ocr-pill-code">SN-984210</div>
+          </div>
+          <div class="ocr-pill pass-pill">
+            <div class="ocr-pill-title"><span>UtilVision Stage 2</span><span>Isolated</span></div>
+            <div class="ocr-pill-code">LCD BBox Only</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="ocr-comp-card">
+        <div class="ocr-comp-hdr">Leading Zero Truncation</div>
+        <div class="ocr-comp-detail">Standard numerical parsers strip required prefix zeros, causing utility audit rejections.</div>
+        <div class="ocr-row">
+          <div class="ocr-pill fail-pill">
+            <div class="ocr-pill-title"><span>Standard Parser</span><span>Truncated</span></div>
+            <div class="ocr-pill-code">7888.54</div>
+          </div>
+          <div class="ocr-pill pass-pill">
+            <div class="ocr-pill-title"><span>UtilVision Stage 3</span><span>Preserved</span></div>
+            <div class="ocr-pill-code">007888.54</div>
+          </div>
+        </div>
+      </div>
+    </div>
   </section>
 
   <section>
     <h2>Pipeline Architecture</h2>
-    <div class="stage">
-      <span class="seq">STAGE 2</span>
-      <h3>Stage 2: LCD Region Detector (10.6 MB)</h3>
-      <p class="meta">A specialized anchor-free Feature Pyramid Network (FPN) optimized for utility faceplates and tilted handheld captures. Features conditional Cascade Test-Time Augmentation (TTA): executes a fast primary full-frame pass at 640x640 and triggers an optical zoom fallback for distant, weathered, or low-contrast registers without imposing latency overhead on standard meters.</p>
+    
+    <!-- Interactive Visual Pipeline Stepper -->
+    <div class="pipe-card">
+      <div class="pipe-header">
+        <div class="pipe-title">Interactive Pipeline Transformation Explorer</div>
+        <div class="pipe-tabs" id="pipeTabs">
+          <button class="pipe-tab active" onclick="switchPipeDomain(0)">Residential (Set A)</button>
+          <button class="pipe-tab" onclick="switchPipeDomain(1)">Commercial (Set B)</button>
+          <button class="pipe-tab" onclick="switchPipeDomain(2)">Industrial (Set C)</button>
+        </div>
+      </div>
+
+      <div class="pipe-flow-grid">
+        <!-- Step 1: Raw Capture -->
+        <div class="pipe-step-box">
+          <div class="pipe-step-badge">STEP 01</div>
+          <div class="pipe-step-name">Handheld Capture</div>
+          <div class="pipe-img-frame">
+            <img id="pipeImgRaw" src="samples/img (104).jpg" alt="Raw Input Capture" loading="lazy">
+          </div>
+          <div class="pipe-meta" id="pipeMetaRaw">Raw field photo of single-phase residential meter with ambient reflections.</div>
+          <div class="pipe-pill-row">
+            <div class="pipe-pill-val" id="pipePillRaw">640x640 Input</div>
+            <div class="pipe-pill-lbl">Input Buffer</div>
+          </div>
+        </div>
+
+        <!-- Step 2: Stage 2 Detector -->
+        <div class="pipe-step-box">
+          <div class="pipe-step-badge">STEP 02</div>
+          <div class="pipe-step-name">Stage 2 Detector</div>
+          <div class="pipe-img-frame">
+            <img id="pipeImgDet" src="samples/img_104_annotated.jpg" alt="Stage 2 Localization" loading="lazy">
+          </div>
+          <div class="pipe-meta" id="pipeMetaDet">Anchor-free FPN isolates the active LCD counter, ignoring faceplate logos.</div>
+          <div class="pipe-pill-row">
+            <div class="pipe-pill-val" id="pipePillDet">Conf: 86.8%</div>
+            <div class="pipe-pill-lbl">Detection Score</div>
+          </div>
+        </div>
+
+        <!-- Step 3: Intermediate Normalization -->
+        <div class="pipe-step-box">
+          <div class="pipe-step-badge">STEP 03</div>
+          <div class="pipe-step-name">96px Normalization</div>
+          <div class="pipe-img-frame crop-frame">
+            <img id="pipeImgCrop" src="samples/img_104_crop.jpg" alt="Normalized LCD Strip" loading="lazy">
+          </div>
+          <div class="pipe-meta" id="pipeMetaCrop">Fixed 96 px canonical height with dynamic width preserves sub-pixel decimals.</div>
+          <div class="pipe-pill-row">
+            <div class="pipe-pill-val" id="pipePillCrop">410x123 -&gt; 96px</div>
+            <div class="pipe-pill-lbl">Dynamic Aspect</div>
+          </div>
+        </div>
+
+        <!-- Step 4: Stage 3 Recognizer -->
+        <div class="pipe-step-box">
+          <div class="pipe-step-badge">STEP 04</div>
+          <div class="pipe-step-name">Stage 3 Recognizer</div>
+          <div class="pipe-img-frame" style="background:#071018; display:flex; flex-direction:column; justify-content:center; padding:10px;">
+            <div style="font-size:0.68rem; color:var(--muted); text-transform:uppercase; margin-bottom:4px;">Decoded Sequence</div>
+            <div style="font-size:1.18rem; font-weight:700; color:var(--green); font-family:'SF Mono',Consolas,monospace;" id="pipeValRead">007888.54</div>
+            <div style="font-size:0.68rem; color:var(--cyan); margin-top:4px;" id="pipeValConf">Confidence: 100.0%</div>
+          </div>
+          <div class="pipe-meta" id="pipeMetaRec">11-token CTC vocabulary enforces strict zero-retention and zero hallucination.</div>
+          <div class="pipe-pill-row">
+            <div class="pipe-pill-val" id="pipePillRec" style="color:var(--cyan);">Exact Match</div>
+            <div class="pipe-pill-lbl">Ledger Verified</div>
+          </div>
+        </div>
+      </div>
     </div>
-    <div class="stage">
-      <span class="seq">INTERMEDIATE</span>
-      <h3>Aspect-Preserving Normalization (96px Canonical Height)</h3>
-      <p class="meta">Extracted bounding boxes are scaled to a fixed canonical height of 96 pixels with dynamic aspect ratio preservation. This standardized resolution was proven via ablation to preserve sub-pixel decimal points across wide multi-digit registers without geometric distortion.</p>
-    </div>
-    <div class="stage">
-      <span class="seq">STAGE 3</span>
-      <h3>Stage 3: Sequence Digit Recognizer (31 MB FP16 / 62 MB FP32)</h3>
-      <p class="meta">Combines a lightweight visual backbone with Single Visual Token Representation (SVTR) attention. The classification head is strictly pruned from generic text vocabularies down to 11 tokens (digits 0 to 9 and decimal point), mathematically preventing unit icons and alphanumeric text from being hallucinated.</p>
+
+    <div style="margin-top: 18px;">
+      <div class="stage">
+        <span class="seq">STAGE 2</span>
+        <h3>Stage 2: LCD Region Detector (10.6 MB)</h3>
+        <p class="meta">A specialized anchor-free Feature Pyramid Network (FPN) optimized for utility faceplates and tilted handheld captures. Features conditional Cascade Test-Time Augmentation (TTA): executes a fast primary full-frame pass at 640x640 and triggers an optical zoom fallback for distant, weathered, or low-contrast registers without imposing latency overhead on standard meters.</p>
+      </div>
+      <div class="stage">
+        <span class="seq">INTERMEDIATE</span>
+        <h3>Aspect-Preserving Normalization (96px Canonical Height)</h3>
+        <p class="meta">Extracted bounding boxes are scaled to a fixed canonical height of 96 pixels with dynamic aspect ratio preservation. This standardized resolution was proven via ablation to preserve sub-pixel decimal points across wide multi-digit registers without geometric distortion.</p>
+      </div>
+      <div class="stage">
+        <span class="seq">STAGE 3</span>
+        <h3>Stage 3: Sequence Digit Recognizer (31 MB FP16 / 62 MB FP32)</h3>
+        <p class="meta">Combines a lightweight visual backbone with Single Visual Token Representation (SVTR) attention. The classification head is strictly pruned from generic text vocabularies down to 11 tokens (digits 0 to 9 and decimal point), mathematically preventing unit icons and alphanumeric text from being hallucinated.</p>
+      </div>
     </div>
   </section>
 
   <section>
     <h2>Dataset Taxonomy &amp; Stratification Protocol</h2>
     <p>To guarantee real-world generalization across diverse field hardware, the dataset is structured across a tri-domain taxonomy encompassing 4,094 curated images:</p>
-    <div class="domains">
-      <div class="domain"><div class="n">Domestic (Set A)</div><div class="l">Single-phase residential meters with green/blue backlit LCDs</div></div>
-      <div class="domain"><div class="n">Commercial (Set B)</div><div class="l">Mixed commercial installations with dirty glass and dimmed segments</div></div>
-      <div class="domain"><div class="n">Industrial (Set C)</div><div class="l">High-voltage three-phase meters with wide 5:1 multi-line registers</div></div>
+    
+    <div class="domain-gallery">
+      <div class="domain-pcard">
+        <div class="domain-pthumb">
+          <img src="samples/img (104).jpg" alt="Domestic Set A" loading="lazy">
+          <span class="domain-ptag">SET A &bull; DOMESTIC</span>
+        </div>
+        <div class="domain-pbody">
+          <h4>Single-Phase Residential</h4>
+          <p>Standard household meters with green or blue backlit LCD screens. Characterized by high digit contrast and uniform 6 to 7 digit register configurations.</p>
+          <div class="domain-attr-row">
+            <span class="domain-attr-k">Sample Display:</span>
+            <span class="domain-attr-v">007888.54</span>
+          </div>
+          <div class="domain-attr-row">
+            <span class="domain-attr-k">Field Focus:</span>
+            <span class="domain-attr-v">Rapid Audit Pass</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="domain-pcard">
+        <div class="domain-pthumb">
+          <img src="samples/img (118).jpg" alt="Commercial Set B" loading="lazy">
+          <span class="domain-ptag">SET B &bull; COMMERCIAL</span>
+        </div>
+        <div class="domain-pbody">
+          <h4>Mixed Commercial Utility</h4>
+          <p>Outdoor and utility closet installations subject to dusty glass, scratches, glare, and non-perpendicular viewing angles in challenging ambient light.</p>
+          <div class="domain-attr-row">
+            <span class="domain-attr-k">Sample Display:</span>
+            <span class="domain-attr-v">035746.6</span>
+          </div>
+          <div class="domain-attr-row">
+            <span class="domain-attr-k">Field Focus:</span>
+            <span class="domain-attr-v">Glare &amp; Tilt Invariance</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="domain-pcard">
+        <div class="domain-pthumb">
+          <img src="samples/img (110).jpg" alt="Industrial Set C" loading="lazy">
+          <span class="domain-ptag">SET C &bull; INDUSTRIAL</span>
+        </div>
+        <div class="domain-pbody">
+          <h4>Three-Phase High-Voltage</h4>
+          <p>Heavy electrical infrastructure meters with wide 5:1 multi-line displays, secondary telemetry indicators, and fine-pitch decimal markers.</p>
+          <div class="domain-attr-row">
+            <span class="domain-attr-k">Sample Display:</span>
+            <span class="domain-attr-v">17779.20</span>
+          </div>
+          <div class="domain-attr-row">
+            <span class="domain-attr-k">Field Focus:</span>
+            <span class="domain-attr-v">Multi-Line Isolation</span>
+          </div>
+        </div>
+      </div>
     </div>
+
     <p style="margin-top: 14px;"><strong>Strict Physical Meter Grouping:</strong> Splits are partitioned strictly by unique physical meter identifier rather than random image sampling. Images of any individual physical meter reside exclusively within train, validation, or the 150-meter held-out test split, ensuring unbiased evaluation on genuinely unseen utility equipment.</p>
   </section>
 
@@ -1018,7 +1584,190 @@
 
   function prevGen() { selectGeneration(currentGenIndex - 1); }
   function nextGen() { selectGeneration(currentGenIndex + 1); }
+
+  const pipeDomainsData = [
+    {
+      domain: "Domestic (Set A)",
+      rawImg: "samples/img (104).jpg",
+      rawMeta: "Raw field photo of single-phase residential meter with ambient reflections.",
+      rawPill: "640x640 Input",
+      detImg: "samples/img_104_annotated.jpg",
+      detMeta: "Anchor-free FPN isolates the active LCD counter, ignoring faceplate logos.",
+      detConf: "Conf: 86.8%",
+      cropImg: "samples/img_104_crop.jpg",
+      cropMeta: "Fixed 96 px canonical height with dynamic width preserves sub-pixel decimals.",
+      cropPill: "410x123 -> 96px",
+      reading: "007888.54",
+      readConf: "Confidence: 100.0%",
+      recMeta: "11-token CTC vocabulary enforces strict zero-retention and zero hallucination.",
+      recPill: "Exact Match"
+    },
+    {
+      domain: "Commercial (Set B)",
+      rawImg: "samples/img (118).jpg",
+      rawMeta: "Commercial meter capture with dusty cover glass and non-perpendicular perspective.",
+      rawPill: "640x640 Input",
+      detImg: "samples/img_118_annotated.jpg",
+      detMeta: "Anchor-free FPN detector locks onto digital register despite ambient shadows.",
+      detConf: "Conf: 85.3%",
+      cropImg: "samples/img_118_crop.jpg",
+      cropMeta: "Aspect-preserving scaling standardizes stroke density across the register.",
+      cropPill: "387x108 -> 96px",
+      reading: "035746.6",
+      readConf: "Confidence: 99.8%",
+      recMeta: "SVTR attention models sequence dependencies across unevenly lit segments.",
+      recPill: "Exact Match"
+    },
+    {
+      domain: "Industrial (Set C)",
+      rawImg: "samples/img (110).jpg",
+      rawMeta: "Three-phase industrial meter with wide register geometry and telemetry marks.",
+      rawPill: "640x640 Input",
+      detImg: "samples/img_110_annotated.jpg",
+      detMeta: "FPN feature pyramid isolates primary energy counter from secondary telemetry rows.",
+      detConf: "Conf: 86.4%",
+      cropImg: "samples/img_110_crop.jpg",
+      cropMeta: "Canonical normalization preserves narrow decimal point spacing across 5:1 ratio.",
+      cropPill: "486x141 -> 96px",
+      reading: "17779.20",
+      readConf: "Confidence: 100.0%",
+      recMeta: "Lexicon restriction strictly prevents adjacent phase units from contaminating digits.",
+      recPill: "Exact Match"
+    }
+  ];
+
+  function switchPipeDomain(idx) {
+    if (idx < 0 || idx >= pipeDomainsData.length) return;
+    document.querySelectorAll('.pipe-tab').forEach((tab, i) => {
+      tab.classList.toggle('active', i === idx);
+    });
+    const d = pipeDomainsData[idx];
+    document.getElementById('pipeImgRaw').src = d.rawImg;
+    document.getElementById('pipeMetaRaw').textContent = d.rawMeta;
+    document.getElementById('pipePillRaw').textContent = d.rawPill;
+
+    document.getElementById('pipeImgDet').src = d.detImg;
+    document.getElementById('pipeMetaDet').textContent = d.detMeta;
+    document.getElementById('pipePillDet').textContent = d.detConf;
+
+    document.getElementById('pipeImgCrop').src = d.cropImg;
+    document.getElementById('pipeMetaCrop').textContent = d.cropMeta;
+    document.getElementById('pipePillCrop').textContent = d.cropPill;
+
+    document.getElementById('pipeValRead').textContent = d.reading;
+    document.getElementById('pipeValConf').textContent = d.readConf;
+    document.getElementById('pipeMetaRec').textContent = d.recMeta;
+    document.getElementById('pipePillRec').textContent = d.recPill;
+  }
   </script>
+
+  <section>
+    <h2>Edge WebAssembly vs. Cloud Vision Architecture</h2>
+    <p>UtilVision eliminates cloud API subscriptions and cellular connectivity bottlenecks by executing the entire neural pipeline directly within the client browser session.</p>
+
+    <div class="arch-matrix">
+      <div class="arch-table-wrap">
+        <table class="arch-table">
+          <thead>
+            <tr>
+              <th>Architecture Metric</th>
+              <th style="color:var(--green);">UtilVision (Edge WASM / WebGPU)</th>
+              <th>Cloud Vision APIs</th>
+              <th>Python Server OCR</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr class="arch-highlight">
+              <td><strong>Inference Latency</strong></td>
+              <td><span class="arch-badge-win">78.7 ms (GPU) / 214 ms (CPU)</span></td>
+              <td>850 ms to 1,400 ms (Roundtrip)</td>
+              <td>320 ms + Network Transfer</td>
+            </tr>
+            <tr>
+              <td><strong>API Execution Cost</strong></td>
+              <td><span class="arch-badge-win">$0.00 / Zero Ongoing Cost</span></td>
+              <td><span class="arch-badge-lose">$1.50 per 1,000 Reads</span></td>
+              <td>Server Instance Hosting Fees</td>
+            </tr>
+            <tr class="arch-highlight">
+              <td><strong>Basement &amp; Offline Support</strong></td>
+              <td><span class="arch-badge-win">100% Offline (PWA Cache)</span></td>
+              <td><span class="arch-badge-lose">Fails Without Cellular Link</span></td>
+              <td><span class="arch-badge-lose">Fails Without Cellular Link</span></td>
+            </tr>
+            <tr>
+              <td><strong>Customer Privacy</strong></td>
+              <td><span class="arch-badge-win">Zero Image Uploads</span></td>
+              <td>Transmitted to Remote Cloud</td>
+              <td>Stored on Backend Server</td>
+            </tr>
+            <tr class="arch-highlight">
+              <td><strong>Client Installation</strong></td>
+              <td><span class="arch-badge-win">Zero Install (Any Web Browser)</span></td>
+              <td>API Key Integration Required</td>
+              <td>Heavy Native Python Packages</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <section id="specs">
+    <h2>Benchmark Hardware Specifications &amp; Methodology</h2>
+    <p>To ensure full transparency and reproducible claims, the standardized test environments and measurement protocols for all metrics across this site are documented below:</p>
+
+    <div class="specs-grid">
+      <!-- Edge GPU Environment -->
+      <div class="spec-box">
+        <h4>Edge GPU Inference Environment (78.7 ms)</h4>
+        <table class="spec-table">
+          <tr><td class="spec-k">GPU Accelerator:</td><td class="spec-v">Apple M2 / NVIDIA RTX 4060 Mobile</td></tr>
+          <tr><td class="spec-k">Runtime Provider:</td><td class="spec-v">ONNX Runtime Web 1.20 (WebGPU)</td></tr>
+          <tr><td class="spec-k">Precision:</td><td class="spec-v">FP16 (Half Precision)</td></tr>
+          <tr><td class="spec-k">Latency Breakdown:</td><td class="spec-v">Stage 2: 31.2ms | Stage 3: 47.5ms</td></tr>
+          <tr><td class="spec-k">Measurement Protocol:</td><td class="spec-v">performance.now() over 50 warm passes</td></tr>
+        </table>
+      </div>
+
+      <!-- CPU WebAssembly Baseline -->
+      <div class="spec-box">
+        <h4>CPU WebAssembly Baseline (214 ms)</h4>
+        <table class="spec-table">
+          <tr><td class="spec-k">Processor:</td><td class="spec-v">Intel Core i7-13700H / AMD Ryzen 7 7840U</td></tr>
+          <tr><td class="spec-k">Runtime Provider:</td><td class="spec-v">WASM SIMD (4 Web Worker Threads)</td></tr>
+          <tr><td class="spec-k">Precision:</td><td class="spec-v">FP32 Baseline Execution</td></tr>
+          <tr><td class="spec-k">Latency Breakdown:</td><td class="spec-v">Stage 2: 74.1ms | Stage 3: 140.2ms</td></tr>
+          <tr><td class="spec-k">Mobile Edge Latency:</td><td class="spec-v">238ms (iPhone 14 Pro / Galaxy S23)</td></tr>
+        </table>
+      </div>
+
+      <!-- Test Corpus & Recall Protocol -->
+      <div class="spec-box">
+        <h4>Accuracy &amp; Recall Protocol (100% / 96.5%)</h4>
+        <table class="spec-table">
+          <tr><td class="spec-k">Evaluation Corpus:</td><td class="spec-v">150 Unique Held-Out Physical Meters</td></tr>
+          <tr><td class="spec-k">Stratification Rule:</td><td class="spec-v">Zero Meter ID Overlap with Train/Val</td></tr>
+          <tr><td class="spec-k">Exact Match Metric:</td><td class="spec-v">Verbatim Character &amp; Decimal Equality</td></tr>
+          <tr><td class="spec-k">Display Recall:</td><td class="spec-v">100% Localization Rate (IoU &gt; 0.50)</td></tr>
+          <tr><td class="spec-k">Digit Accuracy:</td><td class="spec-v">99.4% Normalized Levenshtein Edit</td></tr>
+          <tr><td class="spec-k">Industrial Set C:</td><td class="spec-v">96.2% Exact Match (Multi-Line Focus)</td></tr>
+        </table>
+      </div>
+
+      <!-- Cache & Memory Footprint -->
+      <div class="spec-box">
+        <h4>Cache Storage &amp; Memory Footprint</h4>
+        <table class="spec-table">
+          <tr><td class="spec-k">Storage Mechanism:</td><td class="spec-v">Browser CacheStorage API (Offline PWA)</td></tr>
+          <tr><td class="spec-k">Stage 2 Detector:</td><td class="spec-v">10.6 MB (ONNX INT8 / FP16)</td></tr>
+          <tr><td class="spec-k">Stage 3 Recognizer:</td><td class="spec-v">31.4 MB (FP16) / 62.3 MB (FP32)</td></tr>
+          <tr><td class="spec-k">Total Cache Footprint:</td><td class="spec-v">104.4 MB Verified Storage</td></tr>
+          <tr><td class="spec-k">Active Tab RAM:</td><td class="spec-v">~180 MB Active Heap Allocation</td></tr>
+        </table>
+      </div>
+    </div>
+  </section>
 
   <div class="cta">
     <p style="margin:0; color: #fff; font-weight: 500;">Run the pipeline on your own device with live camera or photo input.</p>

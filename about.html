@@ -89,91 +89,75 @@
   }
   .stats {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 14px;
-    margin: 20px 0 32px;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin: 20px 0 28px;
   }
   .stat {
     background: var(--panel);
     border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 16px;
+    border-radius: 8px;
+    padding: 14px 12px;
     text-align: center;
   }
   .stat .n {
-    font-size: 1.7rem;
+    font-size: 1.5rem;
     color: var(--green);
     font-weight: 700;
   }
   .stat .l {
-    font-size: 0.74rem;
+    font-size: 0.72rem;
     color: var(--muted);
-    margin-top: 4px;
+    margin-top: 3px;
     text-transform: uppercase;
     letter-spacing: 0.04em;
   }
-  .stage {
-    background: var(--panel);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 16px 18px;
-    margin-bottom: 12px;
-    border-left: 3px solid var(--cyan);
-  }
-  .stage h3 {
-    font-size: 1rem;
-    margin: 4px 0;
-    color: #fff;
-    font-weight: 600;
-  }
-  .stage .meta {
-    font-size: 0.84rem;
-    color: var(--muted);
-    margin: 0;
-  }
-  .fail-grid {
-    display: grid;
-    gap: 10px;
-    margin-top: 14px;
-  }
-  .fail {
-    background: var(--panel);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 14px 16px;
-  }
-  .fail b {
-    color: #fff;
-    display: block;
-    margin-bottom: 4px;
-    font-size: 0.92rem;
-  }
-  .fail span {
-    color: var(--muted);
-    font-size: 0.86rem;
-  }
-  .domains {
+  .pipe-spec-summary {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
     gap: 10px;
     margin-top: 14px;
+    border-top: 1px solid #1e293b;
+    padding-top: 14px;
   }
-  .domain {
-    background: var(--panel);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 14px;
-    text-align: center;
+  .pipe-spec-item {
+    background: #0b111c;
+    border: 1px solid #1e293b;
+    border-radius: 6px;
+    padding: 10px 12px;
   }
-  .domain .n {
-    font-size: 1.1rem;
+  .pipe-spec-item b {
+    display: block;
     color: var(--cyan);
-    font-weight: 600;
+    font-size: 0.74rem;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    margin-bottom: 3px;
   }
-  .domain .l {
-    font-size: 0.76rem;
-    color: var(--muted);
-    margin-top: 4px;
+  .pipe-spec-item span {
+    color: #cbd5e1;
+    font-size: 0.78rem;
+    line-height: 1.35;
+    display: block;
+  }
+  .protocol-box {
+    margin-top: 14px;
+    background: #0b111c;
+    border: 1px solid #1e293b;
+    border-radius: 8px;
+    padding: 14px 16px;
+  }
+  .protocol-box h4 {
+    margin: 0 0 6px;
+    font-size: 0.85rem;
+    color: var(--cyan);
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+  .protocol-box p {
+    margin: 0 0 10px;
+    font-size: 0.84rem;
+    color: #cbd5e1;
   }
   table {
     width: 100%;
@@ -882,7 +866,7 @@
   }
   .specs-grid {
     display: grid;
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
     gap: 12px;
   }
   .spec-box {
@@ -903,62 +887,87 @@
   }
   .spec-table {
     width: 100%;
-    font-size: 0.76rem;
+    font-size: 0.78rem;
     border-collapse: collapse;
     background: transparent;
     border: none;
     margin: 0;
   }
-  .spec-table td {
-    padding: 5px 0;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-    background: transparent;
+  .spec-table tr {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding: 6px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    gap: 10px;
   }
-  .spec-table tr:last-child td {
+  .spec-table tr:last-child {
     border-bottom: none;
+  }
+  .spec-table td {
+    padding: 0;
+    border: none;
+    background: transparent;
   }
   .spec-k {
     color: var(--muted);
-    width: 44%;
+    font-size: 0.76rem;
+    flex-shrink: 0;
   }
   .spec-v {
     color: #e2e8f0;
     font-family: 'SF Mono', Consolas, monospace;
+    font-size: 0.76rem;
     text-align: right;
+    word-break: break-word;
   }
 
-  @media (max-width: 768px) {
+  @media (max-width: 860px) {
     .pipe-flow-grid {
       grid-template-columns: repeat(2, 1fr);
     }
+    .pipe-spec-summary {
+      grid-template-columns: 1fr;
+    }
   }
   @media (max-width: 640px) {
+    .wrap {
+      padding: 20px 12px 48px;
+    }
+    .stats {
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px;
+    }
+    .ocr-comp-grid, .domain-gallery, .specs-grid {
+      grid-template-columns: 1fr;
+      gap: 10px;
+    }
     .detail-metrics-grid, .detail-content-grid {
       grid-template-columns: 1fr;
     }
-    .domains, .ocr-comp-grid, .domain-gallery, .specs-grid {
-      grid-template-columns: 1fr;
-      gap: 10px;
-    }
   }
   @media (max-width: 520px) {
-    body { padding: 16px 12px 32px; }
-    h1 { font-size: 1.5rem; }
-    .sub { font-size: 0.88rem; }
-    .stats {
-      grid-template-columns: 1fr;
-      gap: 10px;
-    }
+    h1 { font-size: 1.4rem; }
+    .sub { font-size: 0.86rem; margin-bottom: 20px; }
     .pipe-flow-grid {
       grid-template-columns: 1fr;
     }
-    .evo-card { padding: 14px 12px; }
-    .detail-card { padding: 14px 12px; }
+    .evo-card, .detail-card, .pipe-card {
+      padding: 12px;
+    }
+    .detail-nav-row {
+      flex-direction: column;
+      gap: 8px;
+      align-items: stretch;
+      text-align: center;
+    }
+    .btn-nav-gen {
+      width: 100%;
+      padding: 8px;
+    }
     .metric-val { font-size: 1.25rem; }
     .chart-header { flex-direction: column; align-items: flex-start; }
     .chart-legend { margin-top: 4px; }
-    .fail { padding: 12px 14px; }
-    .stage { padding: 14px 16px; }
   }
 </style>
 </head>
@@ -971,28 +980,19 @@
   <div class="stats">
     <div class="stat"><div class="n mono">100%</div><div class="l">Display Recall</div></div>
     <div class="stat"><div class="n mono">78.7ms</div><div class="l">Edge GPU Latency</div></div>
+    <div class="stat"><div class="n mono">96.5%</div><div class="l">Master Exact Match</div></div>
     <div class="stat"><div class="n mono">$0.00</div><div class="l">Cloud API Cost</div></div>
   </div>
 
   <section>
     <h2>Domain Challenge: Why Off-the-Shelf OCR Fails</h2>
-    <p>Standard OCR libraries (Tesseract, EasyOCR, and native PaddleOCR) achieve less than 40% accuracy on digital utility meters due to four distinct physical and visual characteristics:</p>
-    <div class="fail-grid">
-      <div class="fail"><b>Faceplate Clutter and Text Contamination</b>
-        <span>Printed serial numbers, barcodes, utility brand logos, and manufacture dates distract general-purpose text detectors away from the active consumption display.</span></div>
-      <div class="fail"><b>Segment Disconnection in 7-Segment LCDs</b>
-        <span>Models trained on continuous printed text fracture unlit 7-segment character gaps into disconnected strokes, misclassifying digits into phonetic letters (such as 0 into N, or 8 into B).</span></div>
-      <div class="fail"><b>Unit Marker Interference</b>
-        <span>Adjacent measurement unit symbols (kWh, kW, MD) merge into the active digits, causing catastrophic 10x to 100x billing multiplier errors.</span></div>
-      <div class="fail"><b>Strict Leading Zero Requirements</b>
-        <span>Utility registers require verbatim leading zero preservation (e.g., 007888.54). Standard numerical parsers routinely strip leading zeros, invalidating billing ledger reconciliation.</span></div>
-    </div>
+    <p>General-purpose OCR engines achieve less than 40% accuracy on digital utility meters due to three distinct physical failure modes:</p>
 
-    <!-- Visual Failure Mode Comparison Cards -->
+    <!-- Unified Visual Failure Mode Comparison Cards -->
     <div class="ocr-comp-grid">
       <div class="ocr-comp-card">
         <div class="ocr-comp-hdr">7-Segment Disconnection</div>
-        <div class="ocr-comp-detail">Unlit segment gaps confuse linguistic OCR dictionaries into hallucinating Latin letters.</div>
+        <div class="ocr-comp-detail">Unlit segment gaps confuse linguistic OCR dictionaries into hallucinating Latin letters (e.g., classifying 0 into N, or 8 into B).</div>
         <div class="ocr-row">
           <div class="ocr-pill fail-pill">
             <div class="ocr-pill-title"><span>Standard OCR Engine</span><span>Misread</span></div>
@@ -1006,8 +1006,8 @@
       </div>
 
       <div class="ocr-comp-card">
-        <div class="ocr-comp-hdr">Faceplate Text Contamination</div>
-        <div class="ocr-comp-detail">High-contrast brand text, serial numbers, and barcodes distract general text detectors.</div>
+        <div class="ocr-comp-hdr">Faceplate Clutter &amp; Unit Symbols</div>
+        <div class="ocr-comp-detail">Printed serial numbers, barcodes, brand logos, and adjacent measurement units (kWh, kW) distract text detectors and cause catastrophic multiplier errors.</div>
         <div class="ocr-row">
           <div class="ocr-pill fail-pill">
             <div class="ocr-pill-title"><span>Standard OCR Engine</span><span>Distracted</span></div>
@@ -1021,8 +1021,8 @@
       </div>
 
       <div class="ocr-comp-card">
-        <div class="ocr-comp-hdr">Leading Zero Truncation</div>
-        <div class="ocr-comp-detail">Standard numerical parsers strip required prefix zeros, causing utility audit rejections.</div>
+        <div class="ocr-comp-hdr">Strict Leading Zero Preservation</div>
+        <div class="ocr-comp-detail">Utility registers require verbatim leading zero preservation for billing reconciliation. Standard numerical parsers routinely strip leading zeros.</div>
         <div class="ocr-row">
           <div class="ocr-pill fail-pill">
             <div class="ocr-pill-title"><span>Standard Parser</span><span>Truncated</span></div>
@@ -1112,21 +1112,18 @@
       </div>
     </div>
 
-    <div style="margin-top: 18px;">
-      <div class="stage">
-        <span class="seq">STAGE 2</span>
-        <h3>Stage 2: LCD Region Detector (10.6 MB)</h3>
-        <p class="meta">A specialized anchor-free Feature Pyramid Network (FPN) optimized for utility faceplates and tilted handheld captures. Features conditional Cascade Test-Time Augmentation (TTA): executes a fast primary full-frame pass at 640x640 and triggers an optical zoom fallback for distant, weathered, or low-contrast registers without imposing latency overhead on standard meters.</p>
+    <div class="pipe-spec-summary">
+      <div class="pipe-spec-item">
+        <b>Stage 2 Detector (10.6 MB)</b>
+        <span>Anchor-free FPN with conditional Cascade TTA optical zoom fallback for weathered or distant registers.</span>
       </div>
-      <div class="stage">
-        <span class="seq">INTERMEDIATE</span>
-        <h3>Aspect-Preserving Normalization (96px Canonical Height)</h3>
-        <p class="meta">Extracted bounding boxes are scaled to a fixed canonical height of 96 pixels with dynamic aspect ratio preservation. This standardized resolution was proven via ablation to preserve sub-pixel decimal points across wide multi-digit registers without geometric distortion.</p>
+      <div class="pipe-spec-item">
+        <b>Canonical 96px Normalization</b>
+        <span>Standardized 96 px canonical height with dynamic aspect width preserves sub-pixel decimal point separation.</span>
       </div>
-      <div class="stage">
-        <span class="seq">STAGE 3</span>
-        <h3>Stage 3: Sequence Digit Recognizer (31 MB FP16 / 62 MB FP32)</h3>
-        <p class="meta">Combines a lightweight visual backbone with Single Visual Token Representation (SVTR) attention. The classification head is strictly pruned from generic text vocabularies down to 11 tokens (digits 0 to 9 and decimal point), mathematically preventing unit icons and alphanumeric text from being hallucinated.</p>
+      <div class="pipe-spec-item">
+        <b>Stage 3 Recognizer (31 MB)</b>
+        <span>SVTR visual token attention with 11-token CTC vocabulary (0 to 9, dot) mathematically prevents hallucination.</span>
       </div>
     </div>
   </section>
@@ -1194,7 +1191,22 @@
       </div>
     </div>
 
-    <p style="margin-top: 14px;"><strong>Strict Physical Meter Grouping:</strong> Splits are partitioned strictly by unique physical meter identifier rather than random image sampling. Images of any individual physical meter reside exclusively within train, validation, or the 150-meter held-out test split, ensuring unbiased evaluation on genuinely unseen utility equipment.</p>
+    <div class="protocol-box">
+      <h4>Strict Physical Meter-Grouped Stratification Protocol</h4>
+      <p>Splits are partitioned strictly by unique physical meter identifier rather than random image sampling. Images of any individual physical meter reside exclusively within train, validation, or the 150-meter held-out test split, ensuring unbiased evaluation on genuinely unseen utility equipment.</p>
+      <div class="specs-grid">
+        <table class="spec-table">
+          <tr><td class="spec-k">Held-Out Test Corpus:</td><td class="spec-v">150 Unique Physical Meters</td></tr>
+          <tr><td class="spec-k">Stratification Rule:</td><td class="spec-v">Zero Meter ID Overlap</td></tr>
+          <tr><td class="spec-k">Evaluation Metric:</td><td class="spec-v">Verbatim Character &amp; Decimal Equality</td></tr>
+        </table>
+        <table class="spec-table">
+          <tr><td class="spec-k">Display Localization:</td><td class="spec-v">100% Recall (IoU &gt; 0.50)</td></tr>
+          <tr><td class="spec-k">Digit Recognition:</td><td class="spec-v">99.4% Normalized Levenshtein</td></tr>
+          <tr><td class="spec-k">Industrial Set C:</td><td class="spec-v">96.2% Exact Match</td></tr>
+        </table>
+      </div>
+    </div>
   </section>
 
   <section>
@@ -1715,7 +1727,7 @@
 
   <section id="specs">
     <h2>Benchmark Hardware Specifications &amp; Methodology</h2>
-    <p>To ensure full transparency and reproducible claims, the standardized test environments and measurement protocols for all metrics across this site are documented below:</p>
+    <p>Standardized edge execution environments and measurement protocols for all reported latencies:</p>
 
     <div class="specs-grid">
       <!-- Edge GPU Environment -->
@@ -1741,19 +1753,6 @@
           <tr><td class="spec-k">Mobile Provider:</td><td class="spec-v">WASM Multi-Thread (4 Cores via Credentialless COEP)</td></tr>
           <tr><td class="spec-k">Mobile Single-Pass:</td><td class="spec-v">2.5s to 3.2s (Standard Meters)</td></tr>
           <tr><td class="spec-k">Mobile TTA Fallback:</td><td class="spec-v">3.5s to 4.0s (Weathered / Distant)</td></tr>
-        </table>
-      </div>
-
-      <!-- Test Corpus & Recall Protocol -->
-      <div class="spec-box">
-        <h4>Accuracy &amp; Recall Protocol (100% / 96.5%)</h4>
-        <table class="spec-table">
-          <tr><td class="spec-k">Evaluation Corpus:</td><td class="spec-v">150 Unique Held-Out Physical Meters</td></tr>
-          <tr><td class="spec-k">Stratification Rule:</td><td class="spec-v">Zero Meter ID Overlap with Train/Val</td></tr>
-          <tr><td class="spec-k">Exact Match Metric:</td><td class="spec-v">Verbatim Character &amp; Decimal Equality</td></tr>
-          <tr><td class="spec-k">Display Recall:</td><td class="spec-v">100% Localization Rate (IoU &gt; 0.50)</td></tr>
-          <tr><td class="spec-k">Digit Accuracy:</td><td class="spec-v">99.4% Normalized Levenshtein Edit</td></tr>
-          <tr><td class="spec-k">Industrial Set C:</td><td class="spec-v">96.2% Exact Match (Multi-Line Focus)</td></tr>
         </table>
       </div>
 

@@ -11,13 +11,11 @@
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='18' fill='%230f172a'/%3E%3Ctext x='50' y='68' font-size='58' text-anchor='middle' fill='%2310b981' font-family='monospace'%3E7%3C/text%3E%3C/svg%3E">
 <script>
-  // Desktop: always ort.all.min.js (WebGPU).
-  // Mobile + WebNN API present: ort.all.min.js (WebNN backend needed).
-  // Mobile without WebNN: ort.min.js (lightweight WASM-only, saves 400KB).
+  // Desktop: ort.all.min.js (WebGPU + WASM).
+  // Mobile: ort.min.js (lightweight WASM-only, saves 400KB and bypasses experimental mobile GPU/NPU drivers).
   (function(){
     var mob = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-    var hasWebNN = ('ml' in navigator);
-    var bundle = (!mob || hasWebNN) ? 'ort.all.min.js' : 'ort.min.js';
+    var bundle = mob ? 'ort.min.js' : 'ort.all.min.js';
     document.write('<scr'+'ipt src="https://cdn.jsdelivr.net/npm/onnxruntime-web@1.21.0/dist/'+bundle+'" crossorigin="anonymous"><\/scr'+'ipt>');
   })();
 </script>
@@ -820,11 +818,12 @@ ort.env.wasm.wasmPaths = 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.21.0/di
 
 // ── Provider Detection ─────────────────────────────────────────────────────
 // Desktop: WebGPU -> WASM multi-thread -> WASM single-thread
-// Mobile:  WebNN (NPU) -> WASM multi-thread -> WASM single-thread
+// Mobile:  WASM multi-thread (4-core SIMD) -> WASM single-thread
 //
-// Mobile WebGPU skipped: Adreno drivers produce silent numerical corruption.
-// WebNN targets the Hexagon NPU (Snapdragon) / ANE (Apple) which are purpose-
-// built for inference and have reliable numerical output.
+// Mobile WebGPU/WebNN skipped: mobile GPU/NPU drivers encounter dynamic CTC width
+// and graph compilation limits causing driver hangs.
+// Multi-threaded WASM SIMD executes in 1.0s-1.5s on Snapdragon 8+ Gen 1
+// and sub-second on Snapdragon 8 Gen 3 with zero driver hangs or fallbacks.
 let detectedProvider = 'wasm';
 let activeProvider = 'wasm';
 
@@ -839,16 +838,6 @@ async function probeWebGPU() {
   } catch (e) { return false; }
 }
 
-async function probeWebNN() {
-  if (!isMobileBrowser) return false;
-  if (typeof navigator === 'undefined' || !navigator.ml) return false;
-  try {
-    return typeof navigator.ml.createContext === 'function';
-  } catch (e) {
-    return false;
-  }
-}
-
 function updateBackendBadge() {
   const provider = (activeProvider && activeProvider !== 'wasm') ? activeProvider : detectedProvider;
   if (provider === 'webgpu') {
@@ -856,11 +845,6 @@ function updateBackendBadge() {
     backendBadge.style.background = 'rgba(6,182,212,0.15)';
     backendBadge.style.borderColor = 'rgba(6,182,212,0.5)';
     backendBadge.style.color = '#06b6d4';
-  } else if (provider === 'webnn') {
-    backendBadge.textContent = 'Engine: WebNN (NPU Accelerated)';
-    backendBadge.style.background = 'rgba(139,92,246,0.15)';
-    backendBadge.style.borderColor = 'rgba(139,92,246,0.5)';
-    backendBadge.style.color = '#8b5cf6';
   } else if (numHardwareThreads > 1) {
     backendBadge.textContent = `Engine: WASM (${numHardwareThreads} threads)`;
     backendBadge.style.background = '';
@@ -1032,29 +1016,6 @@ async function getSession(key, url, label) {
       }
     }
 
-    // ── WebNN path (mobile - targets Hexagon NPU / Apple ANE) ────────────
-    if (detectedProvider === 'webnn') {
-      progressLabel.textContent = `Compiling ${label}...`;
-      progressSub.textContent = 'Loading NPU kernels via WebNN...';
-      progressFill.style.width = '100%';
-      try {
-        sessions[key] = await ort.InferenceSession.create(buffer, {
-          executionProviders: [{ name: 'webnn' }, 'wasm'],
-          graphOptimizationLevel: 'all'
-        });
-        activeProvider = 'webnn';
-        updateBackendBadge();
-        progressWrap.style.display = 'none';
-        return sessions[key];
-      } catch (e) {
-        console.warn('[UtilVision] WebNN session failed:', e.message);
-        delete sessions[key];
-        detectedProvider = 'wasm';
-        activeProvider = 'wasm';
-        updateBackendBadge();
-      }
-    }
-
     // ── WASM fallback (always works) ──────────────────────────────────────
     progressLabel.textContent = `Compiling ${label}...`;
     progressSub.textContent = `Initializing WASM execution provider (${numHardwareThreads} thread${numHardwareThreads > 1 ? 's' : ''})...`;
@@ -1073,7 +1034,7 @@ async function getSession(key, url, label) {
 //   (b) silent numerical corruption (all-zero/NaN - known mobile driver issue)
 async function safeRun(key, url, label, feeds) {
   let session = await getSession(key, url, label);
-  const isHardwareProvider = () => activeProvider === 'webgpu' || activeProvider === 'webnn';
+  const isHardwareProvider = () => activeProvider === 'webgpu';
 
   let result;
   try {
@@ -1580,17 +1541,11 @@ updateCacheStatusUI();
 updateBackendBadge(); // initial: shows WASM while probe runs
 
 (async () => {
-  // 1. Probe for WebGPU adapter (desktop) or WebNN context (mobile)
+  // 1. Probe for WebGPU adapter (desktop)
   const hasGPU = await probeWebGPU();
   if (hasGPU) {
     detectedProvider = 'webgpu';
     updateBackendBadge();
-  } else {
-    const hasNN = await probeWebNN();
-    if (hasNN) {
-      detectedProvider = 'webnn';
-      updateBackendBadge();
-    }
   }
 
   // 2. Prefetch and compile both models in background via idle callback.

@@ -964,24 +964,26 @@ async function getSession(key, url, label) {
     const buffer = await fetchModelWithProgress(url, label);
 
     if (detectedProvider === 'webgpu') {
-      // Hybrid mode: WebGPU + WASM together.
-      // ONNX Runtime assigns each op to the best available backend per-op.
-      // Ops with GPU kernels run on GPU; unsupported ops silently fall to WASM.
-      // This never throws due to an unsupported op, unlike ['webgpu'] alone.
       progressLabel.textContent = `Compiling ${label}...`;
       progressSub.textContent = 'Loading GPU shaders. This takes a moment on first run.';
       progressFill.style.width = '100%';
       try {
         sessions[key] = await ort.InferenceSession.create(buffer, {
-          executionProviders: ['webgpu', 'wasm']
+          executionProviders: [
+            { name: 'webgpu', preferredOutputLocation: 'cpu' },
+            'wasm'
+          ]
         });
         activeProvider = 'webgpu';
         updateBackendBadge();
         progressWrap.style.display = 'none';
         return sessions[key];
       } catch (gpuErr) {
-        // Only fails here if WebGPU itself is broken (context creation error etc)
-        console.warn('[UtilVision] WebGPU+WASM hybrid session failed, falling back to WASM-only:', gpuErr.message);
+        const msg = gpuErr.message || String(gpuErr);
+        console.warn('[UtilVision] WebGPU session create failed:', msg);
+        // Show error visibly so we can diagnose remotely
+        statusMessage.textContent = '[WebGPU create] ' + msg;
+        statusMessage.className = 'status-text warn';
         delete sessions[key];
         detectedProvider = 'wasm';
         activeProvider = 'wasm';
@@ -989,7 +991,7 @@ async function getSession(key, url, label) {
       }
     }
 
-    // Pure WASM path (Firefox, old browsers, WebGPU context failure)
+    // Pure WASM path
     progressLabel.textContent = `Compiling ${label}...`;
     progressSub.textContent = `Initializing WASM execution provider (${numHardwareThreads} thread${numHardwareThreads > 1 ? 's' : ''})...`;
     progressFill.style.width = '100%';
@@ -1008,7 +1010,11 @@ async function safeRun(key, url, label, feeds) {
     return await session.run(feeds);
   } catch (runErr) {
     if (activeProvider === 'webgpu') {
-      console.warn('[UtilVision] GPU inference error, evicting session and retrying on WASM:', runErr.message);
+      const msg = runErr.message || String(runErr);
+      console.warn('[UtilVision] GPU run failed:', msg);
+      // Show error visibly for diagnosis
+      statusMessage.textContent = '[WebGPU run] ' + msg;
+      statusMessage.className = 'status-text warn';
       delete sessions[key];
       detectedProvider = 'wasm';
       activeProvider = 'wasm';

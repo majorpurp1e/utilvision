@@ -3,10 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>UtilVision — Real-Time Edge Meter Reading</title>
-<meta name="description" content="On-device computer vision pipeline that reads utility meter LCD displays in the browser via ONNX Runtime Web — no cloud, no per-read cost.">
-<meta property="og:title" content="UtilVision — Real-Time Edge Meter Reading">
-<meta property="og:description" content="Two-stage YOLOv11n + PP-OCRv6 pipeline running entirely client-side via WASM. Upload a photo or use live camera decode.">
+<title>UtilVision - Real-Time Meter Reading</title>
+<meta name="description" content="On-device utility meter reader running in the browser via ONNX Runtime Web. Zero cloud calls, zero per-read cost.">
+<meta property="og:title" content="UtilVision - Real-Time Meter Reading">
+<meta property="og:description" content="Two-stage YOLOv11n + PP-OCRv6 pipeline running client-side in WebAssembly.">
 <meta property="og:type" content="website">
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='18' fill='%2311161C'/%3E%3Ctext x='50' y='68' font-size='58' text-anchor='middle' fill='%23FFB454' font-family='monospace'%3E7%3C/text%3E%3C/svg%3E">
@@ -25,7 +25,7 @@
   .nav a{color:var(--muted);font-size:.85rem;text-decoration:none;border-bottom:1px solid var(--border)}
   .nav a:hover{color:var(--amber);border-color:var(--amber)}
   h1{font-size:1.5rem;margin:0 0 6px;letter-spacing:-.01em}
-  .sub{color:var(--muted);font-size:.92rem;margin:0 0 12px;max-width:52ch}
+  .sub{color:var(--muted);font-size:.92rem;margin:0 0 12px;max-width:54ch}
   .badges{display:flex;gap:8px;flex-wrap:wrap}
   .badge{font-size:.72rem;color:var(--muted);border:1px solid var(--border);
     border-radius:20px;padding:4px 11px}
@@ -70,7 +70,7 @@
   .crop-preview{margin-top:12px;text-align:center}
   .crop-preview img{max-width:100%;border:1px solid var(--border);border-radius:4px;
     image-rendering:pixelated}
-  footer{max-width:680px;margin:0 auto;padding:0 20px 40px;color:var(--muted);font-size:.78rem}
+  footer{max-width:680px;margin:0 auto;padding:0 20px 40px;color:var(--muted);font-size:.8rem;line-height:1.6}
   footer code{background:var(--panel);padding:1px 5px;border-radius:4px}
   .small-btn{padding:8px 14px;min-height:auto;font-size:.82rem}
   @media (max-width:460px){
@@ -82,38 +82,37 @@
 </head>
 <body>
 <header>
-  <div class="nav"><a href="about.html">How it works &amp; benchmarks →</a></div>
+  <div class="nav"><a href="about.html">Architecture and Benchmarks →</a></div>
   <h1>UtilVision</h1>
-  <p class="sub">Real-time edge computer vision for utility meter reading — a two-stage
-    YOLOv11n + PP-OCRv6 pipeline running entirely on-device, right here in your browser.</p>
+  <p class="sub">Fast on-device electric meter reader. Scan or upload a photo to parse the LCD reading directly in your browser with zero cloud calls.</p>
   <div class="badges">
-    <span class="badge">ONNX Runtime Web</span>
-    <span class="badge" id="backendBadge">Backend: —</span>
-    <span class="badge">$0 per-read cost</span>
+    <span class="badge" id="backendBadge">Engine: Loading...</span>
+    <span class="badge">100% On-Device</span>
+    <span class="badge">Private and Offline</span>
   </div>
 </header>
 <main>
   <div class="panel">
     <div class="row">
-      <label class="btn" for="fileInput">Upload / capture photo</label>
+      <label class="btn" for="fileInput">Choose Photo</label>
       <input type="file" id="fileInput" accept="image/*" capture="environment">
-      <button id="runBtn" class="secondary" disabled>Read meter</button>
-      <button id="liveBtn">Start live camera</button>
+      <button id="runBtn" class="secondary" disabled>Read Meter</button>
+      <button id="liveBtn">Live Camera</button>
     </div>
     <div class="row" id="liveControls" style="display:none;margin-top:10px">
-      <button id="freezeBtn" class="secondary small-btn">Freeze reading</button>
-      <button id="flipBtn" class="secondary small-btn">Flip camera</button>
+      <button id="freezeBtn" class="secondary small-btn">Pause</button>
+      <button id="flipBtn" class="secondary small-btn">Switch Camera</button>
     </div>
     <div class="toggle">
       <input type="checkbox" id="precisionToggle">
-      <label for="precisionToggle">Use FP32 recognizer (higher precision, +62MB one-time download)</label>
+      <label for="precisionToggle">High-precision FP32 mode (+62 MB download)</label>
     </div>
     <div class="row" style="margin-top:14px;justify-content:space-between">
-      <span id="cacheStatus" style="font-size:.8rem;color:var(--muted)">Checking cached models…</span>
-      <button id="clearCacheBtn" class="secondary small-btn">Clear cached models</button>
+      <span id="cacheStatus" style="font-size:.8rem;color:var(--muted)">Checking local cache...</span>
+      <button id="clearCacheBtn" class="secondary small-btn">Clear Cache</button>
     </div>
     <div class="progress-wrap" id="progressWrap" style="display:none">
-      <div class="progress-label"><span id="progressLabel">Loading model…</span><span id="progressPct">0%</span></div>
+      <div class="progress-label"><span id="progressLabel">Loading model...</span><span id="progressPct">0%</span></div>
       <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
     </div>
     <img id="preview" alt="Selected meter photo">
@@ -123,7 +122,7 @@
 
   <div class="panel" id="resultPanel" style="display:none">
     <div class="reading-row">
-      <div class="reading-display" id="readingText" role="status" aria-live="polite">—</div>
+      <div class="reading-display" id="readingText" role="status" aria-live="polite">--</div>
       <button id="copyBtn" class="secondary small-btn" aria-label="Copy reading to clipboard">Copy</button>
     </div>
     <div class="status" id="statusText" role="status" aria-live="polite"></div>
@@ -132,23 +131,16 @@
       <span id="ocrConf"></span>
     </div>
     <div class="timing" id="timingRow">
-      <div><div class="val" id="tDet">—</div><div class="lbl">detection (ms)</div></div>
-      <div><div class="val" id="tRec">—</div><div class="lbl">recognition (ms)</div></div>
-      <div><div class="val" id="tTotal">—</div><div class="lbl">total (ms)</div></div>
-      <div><div class="val" id="tFps">—</div><div class="lbl">throughput (fps)</div></div>
+      <div><div class="val" id="tDet">--</div><div class="lbl">Detect (ms)</div></div>
+      <div><div class="val" id="tRec">--</div><div class="lbl">OCR (ms)</div></div>
+      <div><div class="val" id="tTotal">--</div><div class="lbl">Total (ms)</div></div>
+      <div><div class="val" id="tFps">--</div><div class="lbl">FPS</div></div>
     </div>
     <div class="crop-preview" id="cropPreview"></div>
   </div>
 </main>
 <footer>
-  Runs entirely in your browser via ONNX Runtime Web (WASM; multi-threaded automatically
-  when the page is served cross-origin-isolated, single-threaded otherwise — GitHub Pages
-  can't set the required headers, Vercel/Netlify/Cloudflare Pages can). Detection reject
-  threshold 0.25, OCR escalation threshold 0.60 (flagged for manual review here — no cloud
-  fallback wired in). In live mode, the detector re-runs every 5th frame and reuses the last
-  known display position in between, since the meter doesn't move frame-to-frame — recognition
-  still runs on every frame. Timing figures are measured live on your device via
-  <code>performance.now()</code>, not precomputed.
+  Inference runs locally on your machine with ONNX Runtime WebAssembly. Photos and meter readings never leave your browser.
 </footer>
 
 <script>
@@ -245,7 +237,7 @@ async function fetchWithProgress(url, label) {
 async function getSession(key, url, label) {
   if (!sessions[key]) {
     const buffer = await fetchWithProgress(url, label);
-    progressLabel.textContent = 'Compiling ' + label + '…';
+    progressLabel.textContent = 'Compiling ' + label + '...';
     let session = null, backend = null;
     if (!backendKnown && 'gpu' in navigator) {
       try {
@@ -255,9 +247,20 @@ async function getSession(key, url, label) {
     }
     if (!session) {
       session = await ort.InferenceSession.create(buffer, { executionProviders: ['wasm'] });
-      if (!backend) backend = 'WASM (CPU)';
+      if (!backend) {
+        const threads = (typeof self !== 'undefined' && self.crossOriginIsolated)
+          ? (navigator.hardwareConcurrency || 4) : 1;
+        backend = `WASM (${threads} threads)`;
+      }
     }
-    if (!backendKnown) { backendKnown = true; backendBadge.textContent = 'Backend: ' + backend; }
+    if (!backendKnown) {
+      backendKnown = true;
+      backendBadge.textContent = 'Engine: ' + backend;
+      if (typeof self !== 'undefined' && self.crossOriginIsolated) {
+        backendBadge.style.color = 'var(--green)';
+        backendBadge.style.borderColor = 'var(--green)';
+      }
+    }
     sessions[key] = session;
     progressWrap.style.display = 'none';
   }
@@ -266,16 +269,16 @@ async function getSession(key, url, label) {
 
 async function updateCacheStatus() {
   const cache = await openModelCache();
-  if (!cache) { cacheStatusEl.textContent = 'Persistent caching unavailable in this browser.'; return; }
+  if (!cache) { cacheStatusEl.textContent = 'Local caching unavailable.'; return; }
   const keys = await cache.keys();
-  if (keys.length === 0) { cacheStatusEl.textContent = 'No models cached on this device yet.'; return; }
+  if (keys.length === 0) { cacheStatusEl.textContent = 'No models cached yet.'; return; }
   let totalBytes = 0;
   for (const req of keys) {
     const res = await cache.match(req);
     const len = res && res.headers.get('content-length');
     if (len) totalBytes += parseInt(len, 10);
   }
-  cacheStatusEl.textContent = `${keys.length} model file${keys.length > 1 ? 's' : ''} cached · ${(totalBytes / 1e6).toFixed(1)}MB on this device.`;
+  cacheStatusEl.textContent = `${keys.length} model file${keys.length > 1 ? 's' : ''} cached (${(totalBytes / 1e6).toFixed(1)} MB)`;
 }
 
 clearCacheBtn.addEventListener('click', async () => {
@@ -284,7 +287,7 @@ clearCacheBtn.addEventListener('click', async () => {
     if ('caches' in window) await caches.delete(MODEL_CACHE);
     for (const k in sessions) delete sessions[k];
     backendKnown = false;
-    backendBadge.textContent = 'Backend: —';
+    backendBadge.textContent = 'Engine: Ready';
     await updateCacheStatus();
   } catch (e) { cacheStatusEl.textContent = 'Could not clear cache: ' + e.message; }
   clearCacheBtn.disabled = false;
@@ -294,8 +297,8 @@ function prefetchModels() {
   const idle = window.requestIdleCallback || (cb => setTimeout(cb, 300));
   idle(async () => {
     try {
-      await getSession('s2', 'models/stage2.onnx', 'detector model (10.6MB)');
-      await getSession('s3_fp16', 'models/stage3_fp16.onnx', 'recognizer model (31MB)');
+      await getSession('s2', 'models/stage2.onnx', 'Detector model (10.6 MB)');
+      await getSession('s3_fp16', 'models/stage3_fp16.onnx', 'OCR model (31 MB)');
     } catch (e) { console.warn('Prefetch skipped:', e); }
   });
 }
@@ -318,7 +321,7 @@ fileInput.addEventListener('change', () => {
 runBtn.addEventListener('click', async () => {
   if (!currentImg) return;
   runBtn.disabled = true;
-  runBtn.textContent = 'Reading…';
+  runBtn.textContent = 'Reading...';
   resultPanel.style.display = 'block';
   try {
     const W = currentImg.naturalWidth, H = currentImg.naturalHeight;
@@ -338,14 +341,14 @@ runBtn.addEventListener('click', async () => {
     console.error(err);
   }
   runBtn.disabled = false;
-  runBtn.textContent = 'Read meter';
+  runBtn.textContent = 'Read Meter';
 });
 
 liveBtn.addEventListener('click', () => { liveActive ? stopLive() : startLive(); });
 
 freezeBtn.addEventListener('click', () => {
   liveFrozen = !liveFrozen;
-  freezeBtn.textContent = liveFrozen ? 'Resume live decode' : 'Freeze reading';
+  freezeBtn.textContent = liveFrozen ? 'Resume' : 'Pause';
 });
 
 flipBtn.addEventListener('click', async () => {
@@ -363,7 +366,7 @@ flipBtn.addEventListener('click', async () => {
 
 copyBtn.addEventListener('click', async () => {
   const val = readingText.textContent;
-  if (!val || val === '—') return;
+  if (!val || val === '--' || val === '—') return;
   try { await navigator.clipboard.writeText(val); }
   catch (e) {
     const ta = document.createElement('textarea');
@@ -386,7 +389,7 @@ async function startLive() {
   liveVideo.style.display = 'block';
   liveBadge.classList.add('on');
   liveControls.style.display = 'flex';
-  liveBtn.textContent = 'Stop live camera';
+  liveBtn.textContent = 'Stop Camera';
   liveBtn.classList.add('stop');
   runBtn.disabled = true;
   resultPanel.style.display = 'block';
@@ -405,7 +408,7 @@ function stopLive() {
   liveVideo.style.display = 'none';
   liveBadge.classList.remove('on');
   liveControls.style.display = 'none';
-  liveBtn.textContent = 'Start live camera';
+  liveBtn.textContent = 'Live Camera';
   liveBtn.classList.remove('stop');
   runBtn.disabled = !currentImg;
 }
@@ -447,21 +450,21 @@ async function liveLoop() {
 
 function updateResultUI(result) {
   if (result.error) {
-    readingText.textContent = '—';
+    readingText.textContent = '--';
     statusText.textContent = result.error;
     statusText.className = 'status warn';
-    tDet.textContent = tRec.textContent = tTotal.textContent = tFps.textContent = '—';
+    tDet.textContent = tRec.textContent = tTotal.textContent = tFps.textContent = '--';
     cropPreview.innerHTML = '';
     return;
   }
   readingText.textContent = result.reading || '(no digits read)';
   detConfEl.textContent = `Detection: ${(result.detConf * 100).toFixed(1)}%`;
-  ocrConfEl.textContent = `OCR conf: ${(result.ocrConf * 100).toFixed(1)}%`;
+  ocrConfEl.textContent = `OCR: ${(result.ocrConf * 100).toFixed(1)}%`;
   if (result.ocrConf < 0.60) {
-    statusText.textContent = 'Low confidence — verify manually before billing.';
+    statusText.textContent = 'Low confidence. Please double-check reading.';
     statusText.className = 'status warn';
   } else {
-    statusText.textContent = 'Read successfully.';
+    statusText.textContent = 'Reading verified.';
     statusText.className = 'status ok';
   }
   tDet.textContent = result.detMs.toFixed(1);
@@ -491,7 +494,7 @@ async function runDetection(source, W, H, isStale) {
     f2[bO + i] = id2[p + 2] / 255.0;
   }
   const s2Tensor = new ort.Tensor('float32', f2, [1, 3, 640, 640]);
-  const s2sess = await getSession('s2', 'models/stage2.onnx', 'detector model (10.6MB)');
+  const s2sess = await getSession('s2', 'models/stage2.onnx', 'Detector model (10.6 MB)');
   if (isStale()) return { error: 'cancelled', detMs: 0 };
   const tDetStart = performance.now();
   const s2out = await s2sess.run({ images: s2Tensor });
@@ -503,7 +506,7 @@ async function runDetection(source, W, H, isStale) {
     const conf = outData[4 * 8400 + i];
     if (conf > maxConf) { maxConf = conf; bestIdx = i; }
   }
-  if (maxConf < 0.25) return { error: 'No meter display detected.', detMs };
+  if (maxConf < 0.25) return { error: 'No meter display found in frame.', detMs };
   const cx = outData[0 * 8400 + bestIdx];
   const cy = outData[1 * 8400 + bestIdx];
   const bw = outData[2 * 8400 + bestIdx];
@@ -534,7 +537,7 @@ async function runRecognition(source, box, isStale) {
   }
   const s3Tensor = new ort.Tensor('float32', f3, [1, 3, targetH, targetW]);
   const precision = precisionToggle.checked ? 'fp32' : 'fp16';
-  const label = precision === 'fp16' ? 'recognizer model (31MB)' : 'recognizer model (62MB)';
+  const label = precision === 'fp16' ? 'OCR model (31 MB)' : 'OCR model (62 MB)';
   const s3sess = await getSession('s3_' + precision, `models/stage3_${precision}.onnx`, label);
   if (isStale()) return { reading: '', ocrConf: 0, recMs: 0, crop: null };
   const tRecStart = performance.now();

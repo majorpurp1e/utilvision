@@ -2,7 +2,8 @@
 
 UtilVision is an edge-native, browser-based Automatic Meter Reading (AMR) pipeline designed for tenant-owner utility billing platforms. It runs dual deep learning models directly on the client's processor (mobile or desktop) with **zero server GPU costs, zero external API keys, 100% tenant data privacy, and offline capabilities**.
 
-🔗 **Live WebApp:** [https://majorpurp1e.github.io/utilvision/](https://majorpurp1e.github.io/utilvision/)
+🔗 **Live Multi-Threaded WebApp (Vercel):** [https://temporary-brisk-cove-xnkgi5d.vercel.app/](https://temporary-brisk-cove-xnkgi5d.vercel.app/)  
+🔗 **Fallback Static Showcase (GitHub Pages):** [https://majorpurp1e.github.io/utilvision/](https://majorpurp1e.github.io/utilvision/)
 
 ---
 

@@ -76,13 +76,19 @@ Inference latencies measured using the High Resolution Time API (`performance.no
 | Cloud Vision APIs (Broadband) | Remote HTTPS Endpoint | N/A | 1,100 ms to 2,200 ms (Roundtrip) |
 | Cloud Vision APIs (Cellular) | Remote HTTPS Endpoint | N/A | 2,500 ms to 5,000+ ms (Roundtrip) |
 
+*Cold-Start and Runtime Warmup Notice*: Initial inference passes (the first 1 to 2 reads upon launching the application) exhibit higher latency due to client-side runtime initialization:
+* WebGPU Shader Compilation: Browser GPU drivers compile WebGPU Shading Language (WGSL) compute kernels upon the initial forward pass.
+* WASM JIT Tiering and Thread Pool Initialization: WebAssembly engines allocate linear heap buffers, spawn Web Worker threads for `SharedArrayBuffer` parallelism, and transition execution through optimizing JIT compilers.
+* Model Binary Deserialization: ONNX graphs are decompressed from local browser `CacheStorage` into active runtime memory.
+Subsequent inference cycles immediately operate at the steady-state latencies reported in the benchmark table above.
+
 ---
 
 ## In-Browser Engineering Stack
 
 * Multi-Threaded WebAssembly: Configured with `Cross-Origin-Opener-Policy: same-origin` and `Cross-Origin-Embedder-Policy: credentialless` headers via Vercel, enabling shared memory parallelism (`SharedArrayBuffer`) across physical CPU cores without third-party credential blocking.
 * Split Bundle Delivery: Desktop clients load `ort.all.min.js` (710 KB) for native WebGPU hardware acceleration; mobile browsers load the stripped `ort.min.js` (300 KB) for direct 4-core WASM SIMD execution, avoiding experimental mobile GPU/NPU driver compilation stalls.
-* Persistent Model Caching: Model binaries are saved locally via the browser CacheStorage API (`utilvision-models-v1`) upon initial download. Subsequent sessions load models instantly from local storage, requiring zero network bandwidth.
+* Persistent Model Caching: Model binaries are saved locally via the browser CacheStorage API (`utilvision-models-v2`) upon initial download. Subsequent sessions load models instantly from local storage, requiring zero network bandwidth.
 * Camera Stream Amortization: During live video inspection, the Stage 2 Detector runs every 5th frame (`DETECT_EVERY = 5`), reusing the detected bounding box across intermediate frames to maintain responsive video playback.
 * Offline Operation: The application functions completely disconnected from the network once cached, enabling reliable meter audits in subterranean basements and metal enclosure cabinets.
 

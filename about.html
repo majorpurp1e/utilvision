@@ -1303,7 +1303,7 @@
 
     <div class="pipe-spec-summary">
       <div class="pipe-spec-item">
-        <b>Stage 2 Detector (10.6 MB)</b>
+        <b>Stage 2 Detector (2.62M params / 10.6 MB)</b>
         <span>Anchor-free FPN with conditional Cascade TTA optical zoom fallback for weathered or distant registers.</span>
       </div>
       <div class="pipe-spec-item">
@@ -1311,7 +1311,7 @@
         <span>Standardized 96 px canonical height with dynamic aspect width preserves sub-pixel decimal point separation.</span>
       </div>
       <div class="pipe-spec-item">
-        <b>Stage 3 Recognizer (31 MB)</b>
+        <b>Stage 3 Recognizer (15.51M params / 31.4 MB)</b>
         <span>SVTR visual token attention with 11-token CTC vocabulary (0 to 9, dot) mathematically prevents hallucination.</span>
       </div>
     </div>
@@ -2020,6 +2020,7 @@
       <div class="spec-box">
         <h4>Cache Storage &amp; Memory Footprint</h4>
         <table class="spec-table">
+          <tr><td class="spec-k">Pipeline Parameters:</td><td class="spec-v">18.13M Total (Stage 2: 2.62M, Stage 3: 15.51M)</td></tr>
           <tr><td class="spec-k">Storage Mechanism:</td><td class="spec-v">Browser CacheStorage API (Offline PWA)</td></tr>
           <tr><td class="spec-k">Stage 2 Detector:</td><td class="spec-v">10.6 MB (ONNX INT8 / FP16)</td></tr>
           <tr><td class="spec-k">Stage 3 Recognizer:</td><td class="spec-v">31.4 MB (FP16) / 62.3 MB (FP32)</td></tr>

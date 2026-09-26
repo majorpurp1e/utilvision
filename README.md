@@ -30,8 +30,8 @@ flowchart LR
     E --> F["Verified Numeric Reading (kWh Ledger Entry)"]
 ```
 
-### 1. Stage 2 Detector (10.6 MB)
-* Anchor-free feature pyramid network optimized for LCD register localization.
+### 1. Stage 2 Detector (2.62M Parameters / 10.6 MB)
+* Anchor-free feature pyramid network (YOLO11n) containing 2,624,389 weights, optimized for LCD register localization.
 * Input frame resized to 640x640 letterbox buffer.
 * Isolates the primary numeric register from complex background faceplates, rejecting barcodes, manufacturer ratings, and peripheral dials.
 * Equipped with conditional optical test-time augmentation (TTA) that automatically triggers a 75% center zoom crop on distant or low-confidence captures.
@@ -40,8 +40,9 @@ flowchart LR
 * Standardizes cropped meter displays to a fixed canonical height of 96 pixels while dynamically calculating width to preserve natural aspect ratios.
 * Eliminates vertical stroke distortion and preserves fine-pitch decimal point spacing across varying single-phase and three-phase aspect ratios (from 2.5:1 up to 5:1).
 
-### 3. Stage 3 Recognizer (31.4 MB FP16 / 62.3 MB FP32)
-* Single Visual Token Representation (SVTR) architecture modeling character-to-character spatial dependencies without recurrent vanishing gradients.
+### 3. Stage 3 Recognizer (15.51M Parameters / 31.4 MB FP16 / 62.3 MB FP32)
+* Single Visual Token Representation (SVTR) architecture containing 15,506,550 weights, modeling character-to-character spatial dependencies without recurrent vanishing gradients.
+* Combined end-to-end pipeline parameter footprint: 18.13M parameters (18,130,939 total weights).
 * Constrained to an 11-token vocabulary (digits 0 through 9 plus decimal point).
 * Zero hallucination: extraneous alphanumeric characters and measurement units cannot be emitted.
 * Dual precision support: default FP16 half precision (31.4 MB) halves memory bandwidth while maintaining exact floating-point recognition accuracy, with on-demand FP32 (62.3 MB) availability.

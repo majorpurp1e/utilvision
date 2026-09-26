@@ -964,29 +964,32 @@ async function getSession(key, url, label) {
     const buffer = await fetchModelWithProgress(url, label);
 
     if (detectedProvider === 'webgpu') {
-      // --- Try WebGPU first ---
+      // Hybrid mode: WebGPU + WASM together.
+      // ONNX Runtime assigns each op to the best available backend per-op.
+      // Ops with GPU kernels run on GPU; unsupported ops silently fall to WASM.
+      // This never throws due to an unsupported op, unlike ['webgpu'] alone.
       progressLabel.textContent = `Compiling ${label}...`;
       progressSub.textContent = 'Loading GPU shaders. This takes a moment on first run.';
       progressFill.style.width = '100%';
       try {
         sessions[key] = await ort.InferenceSession.create(buffer, {
-          executionProviders: ['webgpu']
+          executionProviders: ['webgpu', 'wasm']
         });
         activeProvider = 'webgpu';
         updateBackendBadge();
         progressWrap.style.display = 'none';
         return sessions[key];
       } catch (gpuErr) {
-        // WebGPU failed (context lost, OOM, unsupported op) - fall through to WASM
-        console.warn('[UtilVision] WebGPU session failed, falling back to WASM:', gpuErr.message);
+        // Only fails here if WebGPU itself is broken (context creation error etc)
+        console.warn('[UtilVision] WebGPU+WASM hybrid session failed, falling back to WASM-only:', gpuErr.message);
         delete sessions[key];
-        detectedProvider = 'wasm'; // prevent future WebGPU attempts this session
+        detectedProvider = 'wasm';
         activeProvider = 'wasm';
         updateBackendBadge();
       }
     }
 
-    // --- WASM fallback (always works) ---
+    // Pure WASM path (Firefox, old browsers, WebGPU context failure)
     progressLabel.textContent = `Compiling ${label}...`;
     progressSub.textContent = `Initializing WASM execution provider (${numHardwareThreads} thread${numHardwareThreads > 1 ? 's' : ''})...`;
     progressFill.style.width = '100%';
@@ -998,13 +1001,12 @@ async function getSession(key, url, label) {
   return sessions[key];
 }
 
-// Wraps session.run() with automatic WebGPU->WASM recovery on GPU context loss
+// Wraps session.run() with automatic WebGPU->WASM recovery on GPU context loss mid-inference
 async function safeRun(key, url, label, feeds) {
   let session = await getSession(key, url, label);
   try {
     return await session.run(feeds);
   } catch (runErr) {
-    // GPU context loss or driver eviction: delete session and retry on WASM
     if (activeProvider === 'webgpu') {
       console.warn('[UtilVision] GPU inference error, evicting session and retrying on WASM:', runErr.message);
       delete sessions[key];
@@ -1014,7 +1016,7 @@ async function safeRun(key, url, label, feeds) {
       session = await getSession(key, url, label);
       return await session.run(feeds);
     }
-    throw runErr; // WASM failure is a real error, bubble up
+    throw runErr;
   }
 }
 

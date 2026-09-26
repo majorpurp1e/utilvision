@@ -108,9 +108,9 @@ Inference latencies measured using the High Resolution Time API (`performance.no
 
 ## Model Repository and Open-Access Weights
 
-The production ONNX model graphs are hosted on Hugging Face Hub under AGPL-3.0 copyleft terms:
+The production ONNX model graphs are published on Hugging Face Hub under AGPL-3.0 copyleft terms as open-access model weights:
 * Hugging Face Model Repository: [https://huggingface.co/majorpurple/utilvision-onnx](https://huggingface.co/majorpurple/utilvision-onnx)
-* Direct Edge Fetching: Model files are delivered directly to client browser sessions via cross-origin requests (`Access-Control-Allow-Origin: *`) and permanently stored in client `CacheStorage` for zero-bandwidth subsequent visits.
+* In-App Asset Delivery: For real-time execution and low-latency delivery, the production web application streams models directly from same-origin edge CDN assets (`models/`) with persistent client-side `CacheStorage`.
 
 ---
 

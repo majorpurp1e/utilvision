@@ -273,14 +273,32 @@
   .chart-svg-wrap {
     width: 100%;
     position: relative;
-    overflow: hidden;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
     user-select: none;
+    scrollbar-width: thin;
+    scrollbar-color: #1f2937 transparent;
+    padding-bottom: 4px;
+  }
+  .chart-svg-wrap::-webkit-scrollbar {
+    height: 4px;
+  }
+  .chart-svg-wrap::-webkit-scrollbar-thumb {
+    background: #1f2937;
+    border-radius: 4px;
   }
   .chart-svg {
     width: 100%;
     height: auto;
     display: block;
-    overflow: visible;
+  }
+  .chart-hint {
+    display: none;
+    font-size: 0.72rem;
+    color: var(--muted);
+    font-family: 'SF Mono', Consolas, monospace;
+    text-align: right;
+    margin-bottom: 6px;
   }
   .grid-line {
     stroke: #1e293b;
@@ -967,11 +985,43 @@
       grid-template-columns: repeat(2, 1fr);
       gap: 8px;
     }
+    .chart-svg {
+      min-width: 580px;
+      height: 200px;
+    }
+    .chart-hint {
+      display: block;
+    }
+    .grid-text {
+      font-size: 13px;
+    }
+    .x-text {
+      font-size: 13px;
+    }
+    #activeLabel {
+      font-size: 14px;
+    }
+    .node-hit {
+      r: 26;
+    }
     .ocr-comp-grid, .domain-gallery, .specs-grid {
       grid-template-columns: 1fr;
       gap: 10px;
     }
-    .detail-metrics-grid, .detail-content-grid {
+    .detail-metrics-grid {
+      grid-template-columns: repeat(3, 1fr);
+      gap: 6px;
+    }
+    .detail-metrics-grid .metric-box {
+      padding: 8px 6px;
+    }
+    .detail-metrics-grid .metric-val {
+      font-size: 1.15rem;
+    }
+    .detail-metrics-grid .metric-lbl {
+      font-size: 0.65rem;
+    }
+    .detail-content-grid {
       grid-template-columns: 1fr;
     }
   }
@@ -997,7 +1047,6 @@
       width: 100%;
       padding: 8px;
     }
-    .metric-val { font-size: 1.25rem; }
     .chart-header { flex-direction: column; align-items: flex-start; }
     .chart-legend { margin-top: 4px; }
   }
@@ -1253,6 +1302,7 @@
           <div class="legend-item"><span class="legend-dot"></span><span>Exact Match (%)</span></div>
         </div>
       </div>
+      <div class="chart-hint">Scroll chart or tap pills to inspect G1 to G10 →</div>
 
       <!-- Responsive SVG Chart -->
       <div class="chart-svg-wrap">
@@ -1598,9 +1648,19 @@
     pulseRing.setAttribute('cy', d.cy);
     
     const activeLabel = document.getElementById('activeLabel');
-    activeLabel.setAttribute('x', d.cx);
+    let labelX = d.cx;
+    if (idx === 0) labelX = d.cx + 10;
+    if (idx === generationsData.length - 1) labelX = d.cx - 10;
+    activeLabel.setAttribute('x', labelX);
     activeLabel.setAttribute('y', Math.max(18, d.cy - 14));
     activeLabel.textContent = `${d.exact}`;
+
+    // Smooth scroll chart container on mobile if needed
+    const chartWrap = document.querySelector('.chart-svg-wrap');
+    if (chartWrap && chartWrap.scrollWidth > chartWrap.clientWidth) {
+      const scrollTarget = (d.cx / 800) * chartWrap.scrollWidth - (chartWrap.clientWidth / 2);
+      chartWrap.scrollTo({ left: Math.max(0, scrollTarget), behavior: 'smooth' });
+    }
 
     // Update pills
     document.querySelectorAll('.gen-pill').forEach((pill, i) => {
@@ -1630,6 +1690,13 @@
 
   function prevGen() { selectGeneration(currentGenIndex - 1); }
   function nextGen() { selectGeneration(currentGenIndex + 1); }
+
+  window.addEventListener('DOMContentLoaded', () => {
+    const chartWrap = document.querySelector('.chart-svg-wrap');
+    if (chartWrap && chartWrap.scrollWidth > chartWrap.clientWidth) {
+      chartWrap.scrollLeft = chartWrap.scrollWidth;
+    }
+  });
 
   const pipeDomainsData = [
     {

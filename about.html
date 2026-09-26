@@ -229,6 +229,78 @@
   .cta a:hover {
     opacity: 0.9;
   }
+  .hero-tag {
+    display: inline-block;
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: var(--cyan);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    background: rgba(6, 182, 212, 0.1);
+    border: 1px solid rgba(6, 182, 212, 0.25);
+    padding: 4px 10px;
+    border-radius: 20px;
+    margin-bottom: 12px;
+  }
+  .protocol-points {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin: 10px 0 14px;
+  }
+  .protocol-point {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    font-size: 0.84rem;
+    color: #cbd5e1;
+    line-height: 1.45;
+  }
+  .p-bullet {
+    color: var(--green);
+    font-weight: 700;
+    font-size: 0.95rem;
+    line-height: 1.2;
+    flex-shrink: 0;
+  }
+  .callout-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+    margin: 14px 0;
+  }
+  .callout-card {
+    background: #0b111c;
+    border: 1px solid #1e293b;
+    border-radius: 8px;
+    padding: 12px;
+    text-align: left;
+  }
+  .callout-card .c-icon {
+    font-size: 1.1rem;
+    margin-bottom: 6px;
+    display: block;
+  }
+  .callout-card .c-title {
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--muted);
+    font-weight: 600;
+    margin-bottom: 4px;
+  }
+  .callout-card .c-val {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--green);
+    margin-bottom: 3px;
+    font-family: 'SF Mono', Consolas, monospace;
+  }
+  .callout-card .c-sub {
+    font-size: 0.74rem;
+    color: #94a3b8;
+    line-height: 1.35;
+  }
   /* Interactive Evolution Graph */
   .evo-card {
     background: var(--panel);
@@ -420,18 +492,18 @@
   }
   .detail-top-row {
     display: flex;
-    justify-content: space-between;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 10px;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
     margin-bottom: 14px;
     border-bottom: 1px solid #1e293b;
     padding-bottom: 12px;
   }
-  .detail-gen-title {
+  .detail-top-meta {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 8px;
+    flex-wrap: wrap;
   }
   .detail-badge {
     background: #1e293b;
@@ -442,19 +514,23 @@
     border-radius: 4px;
     letter-spacing: 0.05em;
     font-family: 'SF Mono', Consolas, monospace;
+    white-space: nowrap;
   }
   .detail-title-text {
-    font-size: 1.05rem;
+    font-size: 1.12rem;
     font-weight: 700;
     color: #fff;
+    line-height: 1.35;
+    margin: 0;
   }
   .detail-tag {
     font-size: 0.75rem;
-    padding: 4px 10px;
+    padding: 3px 9px;
     border-radius: 12px;
     background: rgba(16, 185, 129, 0.15);
     color: var(--green);
     font-weight: 600;
+    white-space: nowrap;
   }
   .detail-tag.sota {
     background: rgba(6, 182, 212, 0.2);
@@ -464,34 +540,51 @@
   .detail-metrics-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: 12px;
+    gap: 10px;
     margin-bottom: 16px;
   }
   .metric-box {
     background: #0f172a;
     border: 1px solid #1e293b;
     border-radius: 8px;
-    padding: 12px 14px;
+    padding: 12px 6px;
     text-align: center;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    min-height: 84px;
   }
   .metric-val {
     font-size: 1.45rem;
     font-weight: 700;
     color: var(--green);
     font-family: 'SF Mono', Consolas, monospace;
+    line-height: 1.1;
   }
-  .metric-val.delta {
+  .metric-badge {
+    font-size: 0.72rem;
+    font-weight: 600;
     color: var(--cyan);
-    font-size: 0.82rem;
-    font-weight: 500;
-    margin-top: 2px;
+    background: rgba(6, 182, 212, 0.12);
+    border: 1px solid rgba(6, 182, 212, 0.25);
+    padding: 1px 6px;
+    border-radius: 4px;
+    margin: 4px 0 2px;
+    white-space: nowrap;
+    display: inline-block;
+  }
+  .metric-badge-spacer {
+    height: 19px;
+    margin: 4px 0 2px;
   }
   .metric-lbl {
-    font-size: 0.72rem;
+    font-size: 0.7rem;
     color: var(--muted);
     text-transform: uppercase;
     letter-spacing: 0.04em;
-    margin-top: 4px;
+    margin-top: 3px;
+    line-height: 1.25;
   }
   .detail-content-grid {
     display: grid;
@@ -1008,21 +1101,37 @@
       grid-template-columns: 1fr;
       gap: 10px;
     }
+    .callout-grid {
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px;
+    }
     .detail-metrics-grid {
       grid-template-columns: repeat(3, 1fr);
       gap: 6px;
     }
     .detail-metrics-grid .metric-box {
-      padding: 8px 6px;
+      padding: 8px 4px;
+      min-height: 76px;
     }
     .detail-metrics-grid .metric-val {
       font-size: 1.15rem;
     }
-    .detail-metrics-grid .metric-lbl {
+    .detail-metrics-grid .metric-badge {
       font-size: 0.65rem;
+      padding: 1px 4px;
+    }
+    .detail-metrics-grid .metric-badge-spacer {
+      height: 16px;
+    }
+    .detail-metrics-grid .metric-lbl {
+      font-size: 0.62rem;
     }
     .detail-content-grid {
       grid-template-columns: 1fr;
+      gap: 10px;
+    }
+    .detail-title-text {
+      font-size: 1.02rem;
     }
   }
   @media (max-width: 520px) {
@@ -1055,6 +1164,7 @@
 <body>
 <div class="wrap">
   <div class="nav"><a href="index.html">← Back to Reader</a></div>
+  <div class="hero-tag">EDGE-FIRST NEURAL VISION • PRODUCTION SPEC</div>
   <h1>UtilVision Architecture &amp; Benchmarks</h1>
   <p class="sub">A lightweight, two-stage deep learning pipeline engineered to detect and parse utility meter LCD counters locally on edge hardware with zero API dependencies.</p>
 
@@ -1066,7 +1176,8 @@
   </div>
 
   <section>
-    <h2>Domain Challenge: Why Off-the-Shelf OCR Fails</h2>
+    <div class="seq">// 01 DOMAIN CHALLENGE</div>
+    <h2>Why Off-the-Shelf OCR Fails on Utility Registers</h2>
     <p>General-purpose OCR engines achieve less than 40% accuracy on digital utility meters due to three distinct physical failure modes:</p>
 
     <!-- Unified Visual Failure Mode Comparison Cards -->
@@ -1119,7 +1230,8 @@
   </section>
 
   <section>
-    <h2>Pipeline Architecture</h2>
+    <div class="seq">// 02 PIPELINE ARCHITECTURE</div>
+    <h2>Two-Stage Decoupled Inference Pipeline</h2>
     
     <!-- Interactive Visual Pipeline Stepper -->
     <div class="pipe-card">
@@ -1210,7 +1322,8 @@
   </section>
 
   <section>
-    <h2>Dataset Taxonomy &amp; Stratification Protocol</h2>
+    <div class="seq">// 03 DATASET &amp; PROTOCOL</div>
+    <h2>Tri-Domain Taxonomy &amp; Stratification Protocol</h2>
     <p>To guarantee real-world generalization across diverse field hardware, the dataset is structured across a tri-domain taxonomy encompassing 4,094 curated images:</p>
     
     <div class="domain-gallery">
@@ -1274,12 +1387,25 @@
 
     <div class="protocol-box">
       <h4>Strict Physical Meter-Grouped Stratification Protocol</h4>
-      <p>Splits are partitioned strictly by unique physical meter identifier rather than random image sampling. Images of any individual physical meter reside exclusively within train, validation, or the 150-meter held-out test split, ensuring unbiased evaluation on genuinely unseen utility equipment.</p>
+      <div class="protocol-points">
+        <div class="protocol-point">
+          <span class="p-bullet">✓</span>
+          <div><strong>Physical Meter Partitioning:</strong> Splits are grouped strictly by unique meter hardware identifier. Images of any single physical meter exist exclusively within train, validation, or the test split.</div>
+        </div>
+        <div class="protocol-point">
+          <span class="p-bullet">✓</span>
+          <div><strong>150-Meter Held-Out Corpus:</strong> Completely unseen utility equipment ensures unbiased zero-leakage evaluation.</div>
+        </div>
+        <div class="protocol-point">
+          <span class="p-bullet">✓</span>
+          <div><strong>Verbatim Ledger Equality:</strong> Scored on exact character, decimal point, and leading-zero equality without fuzzy numeric tolerance.</div>
+        </div>
+      </div>
       <div class="specs-grid">
         <table class="spec-table">
           <tr><td class="spec-k">Held-Out Test Corpus:</td><td class="spec-v">150 Unique Physical Meters</td></tr>
           <tr><td class="spec-k">Stratification Rule:</td><td class="spec-v">Zero Meter ID Overlap</td></tr>
-          <tr><td class="spec-k">Evaluation Metric:</td><td class="spec-v">Verbatim Character &amp; Decimal Equality</td></tr>
+          <tr><td class="spec-k">Evaluation Metric:</td><td class="spec-v">Verbatim Equality</td></tr>
         </table>
         <table class="spec-table">
           <tr><td class="spec-k">Display Localization:</td><td class="spec-v">100% Recall (IoU &gt; 0.50)</td></tr>
@@ -1291,8 +1417,9 @@
   </section>
 
   <section>
-    <h2>Model Evolution &amp; Benchmark Progression</h2>
-    <p>Verbatim exact-match accuracy evaluated consistently on the master benchmark pool across engineering iterations. Click or tap any generation to inspect technical strategies and physical field challenges solved.</p>
+    <div class="seq">// 04 EVOLUTION &amp; BENCHMARKS</div>
+    <h2>Model Evolution Across 10 Generations</h2>
+    <p>Verbatim exact-match accuracy evaluated consistently on the master benchmark pool across engineering iterations. Tap any generation below to inspect its technical breakthrough:</p>
 
     <!-- Interactive Evolution Card -->
     <div class="evo-card">
@@ -1425,26 +1552,28 @@
       <!-- Stage Detail Card -->
       <div class="detail-card" id="evoDetailCard">
         <div class="detail-top-row">
-          <div class="detail-gen-title">
+          <div class="detail-top-meta">
             <span class="detail-badge" id="cardGenBadge">GENERATION 10</span>
-            <span class="detail-title-text" id="cardTitle">Champion Stage3DetectorV1</span>
+            <span class="detail-tag sota" id="cardTag">Production SOTA</span>
           </div>
-          <span class="detail-tag sota" id="cardTag">Production SOTA</span>
+          <span class="detail-title-text" id="cardTitle">Champion Stage 3 Recognizer (SOTA)</span>
         </div>
 
         <div class="detail-metrics-grid">
           <div class="metric-box">
             <div class="metric-val" id="cardExact">96.5%</div>
-            <div class="metric-val delta" id="cardDelta">+2.4% vs Gen 9</div>
-            <div class="metric-lbl">Master Exact Match</div>
+            <div class="metric-badge" id="cardDelta">+2.4%</div>
+            <div class="metric-lbl">Exact Match</div>
           </div>
           <div class="metric-box">
             <div class="metric-val" id="cardDigitAcc">99.4%</div>
-            <div class="metric-lbl">Digit-Level Accuracy</div>
+            <div class="metric-badge-spacer"></div>
+            <div class="metric-lbl">Digit Acc</div>
           </div>
           <div class="metric-box">
             <div class="metric-val" id="cardIndustrial">96.2%</div>
-            <div class="metric-lbl">Set C Industrial Match</div>
+            <div class="metric-badge-spacer"></div>
+            <div class="metric-lbl">Industrial Set C</div>
           </div>
         </div>
 
@@ -1481,7 +1610,7 @@
             <tr><td>7</td><td>Industrial high-voltage domain integration</td><td class="mono">89.4%</td><td class="mono">97.1%</td><td class="mono">50.4%</td></tr>
             <tr><td>8</td><td>High-density annotation boundary audit</td><td class="mono">91.8%</td><td class="mono">97.8%</td><td class="mono">51.7%</td></tr>
             <tr><td>9</td><td>Canonical 96px aspect-preserving crop normalization</td><td class="mono">94.1%</td><td class="mono">98.6%</td><td class="mono">84.6%</td></tr>
-            <tr><td>10</td><td>Champion Stage3DetectorV1 (synthetic glare &amp; segment cutout)</td><td class="mono">96.5%</td><td class="mono">99.4%</td><td class="mono">96.2%</td></tr>
+            <tr><td>10</td><td>Champion Stage 3 Recognizer (synthetic glare &amp; segment cutout)</td><td class="mono">96.5%</td><td class="mono">99.4%</td><td class="mono">96.2%</td></tr>
           </table>
         </div>
       </details>
@@ -1496,7 +1625,7 @@
       tag: "Baseline Model",
       tagType: "default",
       exact: "24.1%",
-      delta: "Initial Benchmark",
+      delta: "Baseline",
       digitAcc: "61.4%",
       industrial: "8.2%",
       strategy: "Standard convolutional recurrent network with bidirectional LSTM and generic Latin CTC lexicon. Zero utility domain customization.",
@@ -1510,7 +1639,7 @@
       tag: "+28.7% Leap",
       tagType: "gain",
       exact: "52.8%",
-      delta: "+28.7% vs Gen 1",
+      delta: "+28.7%",
       digitAcc: "81.3%",
       industrial: "19.5%",
       strategy: "Pruned classification dictionary strictly to 11 classes (digits 0 to 9 plus decimal point). Enforced verbatim sequence length priors.",
@@ -1524,7 +1653,7 @@
       tag: "+15.5% Leap",
       tagType: "gain",
       exact: "68.3%",
-      delta: "+15.5% vs Gen 2",
+      delta: "+15.5%",
       digitAcc: "88.9%",
       industrial: "31.2%",
       strategy: "Replaced shallow convolution layers with deep residual blocks (ResNet-18) to deepen receptive field and improve gradient flow.",
@@ -1538,7 +1667,7 @@
       tag: "+5.8% Gain",
       tagType: "gain",
       exact: "74.1%",
-      delta: "+5.8% vs Gen 3",
+      delta: "+5.8%",
       digitAcc: "91.2%",
       industrial: "38.6%",
       strategy: "Introduced Single Visual Token Representation (SVTR) self-attention blocks to model character-to-character contextual relationships.",
@@ -1552,7 +1681,7 @@
       tag: "+7.3% Gain",
       tagType: "gain",
       exact: "81.4%",
-      delta: "+7.3% vs Gen 4",
+      delta: "+7.3%",
       digitAcc: "94.1%",
       industrial: "46.2%",
       strategy: "Injected targeted synthetic blur, lens defocus, motion artifacts, and non-uniform illumination fields during training epochs.",
@@ -1566,7 +1695,7 @@
       tag: "+4.5% Gain",
       tagType: "gain",
       exact: "85.9%",
-      delta: "+4.5% vs Gen 5",
+      delta: "+4.5%",
       digitAcc: "95.8%",
       industrial: "49.8%",
       strategy: "Equalized sampling and cross-entropy loss balancing between residential domestic meters (Set A) and commercial installations (Set B).",
@@ -1580,7 +1709,7 @@
       tag: "+3.5% Gain",
       tagType: "gain",
       exact: "89.4%",
-      delta: "+3.5% vs Gen 6",
+      delta: "+3.5%",
       digitAcc: "97.1%",
       industrial: "50.4%",
       strategy: "Integrated three-phase industrial meter registers (Set C) featuring multi-line displays into the primary training distribution.",
@@ -1594,7 +1723,7 @@
       tag: "+2.4% Gain",
       tagType: "gain",
       exact: "91.8%",
-      delta: "+2.4% vs Gen 7",
+      delta: "+2.4%",
       digitAcc: "97.8%",
       industrial: "51.7%",
       strategy: "Exhaustive algorithmic verification and manual adjudication of bounding boxes and character boundaries across all 4,094 images.",
@@ -1605,10 +1734,10 @@
     {
       gen: 9,
       title: "Canonical 96px Aspect Normalization",
-      tag: "+32.9% Set C Surge",
+      tag: "+32.9% Set C",
       tagType: "gain",
       exact: "94.1%",
-      delta: "+2.3% vs Gen 8",
+      delta: "+2.3%",
       digitAcc: "98.6%",
       industrial: "84.6%",
       strategy: "Standardized extracted crops to a 96 px canonical height with dynamic width aspect-ratio preservation under physical meter stratification.",
@@ -1618,11 +1747,11 @@
     },
     {
       gen: 10,
-      title: "Champion Stage3DetectorV1 (SOTA)",
+      title: "Champion Stage 3 Recognizer (SOTA)",
       tag: "Production SOTA",
       tagType: "sota",
       exact: "96.5%",
-      delta: "+2.4% vs Gen 9",
+      delta: "+2.4%",
       digitAcc: "99.4%",
       industrial: "96.2%",
       strategy: "Fine-tuned 30 epochs with synthetic specular glare injection and random segment cutout regularization with quantized export.",
@@ -1775,8 +1904,37 @@
   </script>
 
   <section>
+    <div class="seq">// 05 ARCHITECTURE COMPARISON</div>
     <h2>Edge WebAssembly vs. Cloud Vision Architecture</h2>
     <p>UtilVision eliminates cloud API subscriptions and cellular connectivity bottlenecks by executing the entire neural pipeline directly within the client browser session. Empirical roundtrip benchmarks to cloud endpoints reveal 768 ms in initial TLS setup alone, yielding 1,100 ms to 2,200 ms broadband turnaround (and 2.5s to 5.0s+ over cellular), alongside outright failure in subterranean utility spaces.</p>
+
+    <!-- 4 High-Impact Highlight Cards -->
+    <div class="callout-grid">
+      <div class="callout-card">
+        <span class="c-icon">⚡</span>
+        <div class="c-title">Inference Speed</div>
+        <div class="c-val">78.7 ms</div>
+        <div class="c-sub">15x to 30x faster than cloud API roundtrips (1.1s to 2.2s).</div>
+      </div>
+      <div class="callout-card">
+        <span class="c-icon">💰</span>
+        <div class="c-title">Ongoing Cost</div>
+        <div class="c-val">$0.00</div>
+        <div class="c-sub">Zero per-read fees (vs $1.50 to $2.50+ per 1k on Cloud Vision).</div>
+      </div>
+      <div class="callout-card">
+        <span class="c-icon">📶</span>
+        <div class="c-title">Field Reliability</div>
+        <div class="c-val">100% Offline</div>
+        <div class="c-sub">Guaranteed operation in concrete basements and utility shafts.</div>
+      </div>
+      <div class="callout-card">
+        <span class="c-icon">🔒</span>
+        <div class="c-title">Data Privacy</div>
+        <div class="c-val">Client-Only</div>
+        <div class="c-sub">Zero customer meter photos ever leave the local device.</div>
+      </div>
+    </div>
 
     <div class="arch-matrix">
       <div class="arch-table-wrap">
@@ -1827,6 +1985,7 @@
   </section>
 
   <section id="specs">
+    <div class="seq">// 06 SPECIFICATIONS</div>
     <h2>Benchmark Hardware Specifications &amp; Methodology</h2>
     <p>Standardized edge execution environments and measurement protocols for all reported latencies:</p>
 

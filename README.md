@@ -128,4 +128,4 @@ This project is deployed to production on Vercel:
 
 Vercel provides the requisite security headers (`COOP: same-origin` and `COEP: credentialless`) necessary to unlock high-performance multi-threading across Web Workers without browser origin isolation errors.
 
-*Note on Deployment*: The previous GitHub Pages deployment is closed and obsolete. GitHub Pages cannot serve custom headers natively, preventing `SharedArrayBuffer` allocation on multi-core clients. Vercel serves as the exclusive canonical production deployment.
+*Note on Deployment*: GitHub Pages has been decommissioned and removed. GitHub Pages cannot serve custom headers natively, preventing `SharedArrayBuffer` allocation on multi-core clients. Vercel serves as the exclusive canonical production host.
